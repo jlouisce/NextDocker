@@ -1,23 +1,85 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Footer from '../components/Footer';
 import { useApp } from '../context/AppContext';
 
 export default function Profile() {
-  const { user, reservations, cancelReservation } = useApp();
+  const { user, setUser, reservations, cancelReservation } = useApp();
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    name: user.name,
+    company: user.company,
+    email: user.email,
+  });
+
+  const handleSaveUser = (e) => {
+    e.preventDefault();
+    setUser(formData);
+    setIsEditing(false);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 text-slate-800 font-sans">
       {/* Header */}
       <section className="bg-slate-950 text-white py-12 px-6">
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
+          <div className="w-full md:w-auto">
             <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full uppercase">
               Verified Logistics Partner
             </span>
-            <h1 className="text-3xl font-extrabold tracking-tight mt-2">{user.name}</h1>
-            <p className="text-slate-400 text-xs mt-1">{user.company} • {user.email}</p>
+
+            {isEditing ? (
+              <form onSubmit={handleSaveUser} className="mt-4 space-y-3 max-w-md bg-slate-900 p-4 rounded-lg border border-slate-800">
+                <div>
+                  <label className="block text-[10px] text-slate-400 uppercase font-bold">Full Name</label>
+                  <input 
+                    type="text" 
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-700 mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-400 uppercase font-bold">Company Name</label>
+                  <input 
+                    type="text" 
+                    value={formData.company}
+                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                    className="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-700 mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-slate-400 uppercase font-bold">Email Address</label>
+                  <input 
+                    type="email" 
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="w-full bg-slate-800 text-white text-xs p-2 rounded border border-slate-700 mt-1"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button type="submit" className="bg-amber-500 text-slate-950 font-bold px-3 py-1 rounded text-xs">
+                    Save Changes
+                  </button>
+                  <button type="button" onClick={() => setIsEditing(false)} className="bg-slate-800 text-slate-300 font-bold px-3 py-1 rounded text-xs">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div>
+                <h1 className="text-3xl font-extrabold tracking-tight mt-2">{user.name}</h1>
+                <p className="text-slate-400 text-xs mt-1">{user.company} • {user.email}</p>
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  className="mt-3 text-xs text-amber-400 hover:underline font-semibold flex items-center gap-1"
+                >
+                  ✏️ Edit Profile Info
+                </button>
+              </div>
+            )}
           </div>
-          <div className="bg-slate-900 border border-slate-800 p-4 rounded-lg text-left md:text-right">
+
+          <div className="bg-slate-900 border border-slate-800 p-4 rounded-lg text-left md:text-right w-full md:w-auto">
             <div className="text-[11px] text-slate-400">Active Bookings</div>
             <div className="text-2xl font-black text-amber-500">{reservations.length} Units</div>
           </div>
