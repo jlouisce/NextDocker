@@ -1,13 +1,52 @@
-import { Link } from 'react-router-dom';
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
 
 export default function Navbar() {
+  const location = useLocation();
+  const isActive = (path) => location.pathname === path;
+
   return (
-    <nav style={{ padding: '1rem', display: 'flex', gap: '1rem', background: '#222', color: '#fff' }}>
-      <Link to="/" style={{ color: '#fff' }}>Inicio</Link>
-      <Link to="/marketplace" style={{ color: '#fff' }}>Marketplace</Link>
-      <Link to="/login" style={{ color: '#fff' }}>Ingresar</Link>
-      <Link to="/signup" style={{ color: '#fff' }}>Registro</Link>
-      <Link to="/perfil" style={{ color: '#fff' }}>Perfil</Link>
-    </nav>
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className="text-xl font-extrabold text-slate-900 tracking-tight">
+          NextDocker
+        </Link>
+
+        {/* Navegación */}
+        <nav className="flex items-center gap-8 text-xs font-semibold text-slate-600">
+          <Link 
+            to="/marketplace" 
+            className={isActive('/marketplace') ? 'text-black font-bold border-b-2 border-black pb-1' : 'hover:text-black transition-colors'}
+          >
+            Marketplace
+          </Link>
+          <Link 
+            to="/tracking" 
+            className={isActive('/tracking') ? 'text-black font-bold border-b-2 border-black pb-1' : 'hover:text-black transition-colors'}
+          >
+            Tracking
+          </Link>
+          <Link 
+            to="/logistics" 
+            className={isActive('/logistics') ? 'text-black font-bold border-b-2 border-black pb-1' : 'hover:text-black transition-colors'}
+          >
+            Logistics
+          </Link>
+          <Link 
+            to="/rates" 
+            className={isActive('/rates') ? 'text-black font-bold border-b-2 border-black pb-1' : 'hover:text-black transition-colors'}
+          >
+            Rates
+          </Link>
+        </nav>
+
+        {/* Acciones */}
+        <div className="flex items-center gap-5 text-slate-700">
+          <Link to="/profile" className="hover:text-black transition-colors text-sm">👤</Link>
+          <button className="hover:text-black transition-colors text-sm">🔍</button>
+        </div>
+      </div>
+    </header>
   );
 }
