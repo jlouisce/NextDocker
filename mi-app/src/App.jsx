@@ -6,6 +6,7 @@ import Tracking from './pages/Tracking';
 import Logistics from './pages/Logistics';
 import Rates from './pages/Rates';
 import Profile from './pages/Profile';
+import ProductDetail from './pages/ProductDetail';
 
 export default function App() {
   return (
@@ -15,6 +16,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/marketplace" element={<LandingPage />} />
+          <Route path="/containers/:id" element={<ProductDetail />} />
           <Route path="/tracking" element={<Tracking />} />
           <Route path="/logistics" element={<Logistics />} />
           <Route path="/rates" element={<Rates />} />

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 
 export default function ContainerModal({ container, onClose }) {
@@ -63,7 +64,13 @@ export default function ContainerModal({ container, onClose }) {
 
         {/* Footer Actions */}
         <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
-          <button 
+          <Link
+            to={`/containers/${container.id}`}
+            className="px-4 py-2 border border-slate-300 text-slate-700 font-bold text-xs rounded hover:bg-slate-100"
+          >
+            View details
+          </Link>
+          <button
             onClick={onClose}
             className="px-4 py-2 border border-slate-300 text-slate-700 font-bold text-xs rounded hover:bg-slate-100"
           >

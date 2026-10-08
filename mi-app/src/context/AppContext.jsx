@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { containersData as initialContainers } from '../data/mockData';
+import { containersData as initialContainers, initialCart, cartCatalog } from '../data/mockData';
 
 const AppContext = createContext();
 
@@ -19,6 +19,12 @@ export function AppProvider({ children }) {
     return saved ? JSON.parse(saved) : [];
   });
 
+  // Carrito: solo se guarda { containerId, origin }; título, imagen y costos salen de `cartCatalog`.
+  const [cart, setCart] = useState(() => {
+    const saved = localStorage.getItem('nextdocker_cart');
+    return saved ? JSON.parse(saved) : initialCart;
+  });
+
   // Estado del usuario activo
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('nextdocker_user');
@@ -35,8 +41,25 @@ export function AppProvider({ children }) {
   }, [reservations]);
 
   useEffect(() => {
+    localStorage.setItem('nextdocker_cart', JSON.stringify(cart));
+  }, [cart]);
+
+  useEffect(() => {
     localStorage.setItem('nextdocker_user', JSON.stringify(user));
   }, [user]);
+
+  // Acciones del carrito (un contenedor por tipo; si ya está, no se duplica)
+  const addToCart = (containerId, origin) => {
+    const entry = cartCatalog[containerId];
+    if (!entry) return;
+    setCart((prev) => (prev.some((i) => i.containerId === containerId)
+      ? prev
+      : [...prev, { containerId, origin: origin || entry.baseOrigin }]));
+  };
+  const removeFromCart = (containerId) => setCart((prev) => prev.filter((i) => i.containerId !== containerId));
+  const setCartOrigin = (containerId, origin) =>
+    setCart((prev) => prev.map((i) => (i.containerId === containerId ? { ...i, origin } : i)));
+  const clearCart = () => setCart([]);
 
   // Función para reservar equipamiento
   const reserveContainer = (containerId, originPort = 'Shanghai (CNSHA)') => {
@@ -68,6 +91,11 @@ export function AppProvider({ children }) {
         reservations,
         user,
         setUser,
+        cart,
+        addToCart,
+        removeFromCart,
+        setCartOrigin,
+        clearCart,
         reserveContainer,
         cancelReservation,
       }}

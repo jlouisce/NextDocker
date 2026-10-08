@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Footer from '../components/Footer';
 import { useApp } from '../context/AppContext';
-import { cartItemsData } from '../data/mockData';
+import { cartCatalog } from '../data/mockData';
 import iconTrash from '../assets/figma/icon-trash.svg';
 import iconRoute from '../assets/figma/icon-route.svg';
 import iconSelectArrow from '../assets/figma/icon-image.svg';
@@ -13,14 +13,16 @@ const moneyShort = (value) => `$${value.toLocaleString('en-US')}`;
 
 export default function Logistics() {
   const navigate = useNavigate();
-  const { reserveContainer } = useApp();
-  // Estado del carrito: cada ítem guarda el código de origen elegido.
-  const [cart, setCart] = useState(() => cartItemsData.map((item) => ({ ...item, origin: item.baseOrigin })));
+  const { cart: cartState, setCartOrigin, removeFromCart, clearCart, reserveContainer } = useApp();
+  // El estado guarda { containerId, origin }; el resto de los datos sale del catálogo.
+  const cart = cartState
+    .filter(({ containerId }) => cartCatalog[containerId])
+    .map(({ containerId, origin }) => ({ id: containerId, containerId, origin, ...cartCatalog[containerId] }));
 
   const originOf = (item, code = item.origin) => item.origins.find((o) => o.code === code);
 
-  const setOrigin = (id, origin) => setCart((prev) => prev.map((item) => (item.id === id ? { ...item, origin } : item)));
-  const removeItem = (id) => setCart((prev) => prev.filter((item) => item.id !== id));
+  const setOrigin = (id, origin) => setCartOrigin(id, origin);
+  const removeItem = (id) => removeFromCart(id);
 
   const merchandise = cart.reduce((sum, item) => sum + item.unitCost, 0);
   const freight = cart.reduce((sum, item) => sum + originOf(item).freight, 0);
@@ -33,7 +35,7 @@ export default function Logistics() {
       const origin = originOf(item);
       reserveContainer(item.containerId, `${origin.port} (${origin.code})`);
     });
-    setCart([]);
+    clearCart();
     navigate('/tracking');
   };
 
