@@ -7,7 +7,10 @@ export function AppProvider({ children }) {
   // Estado de contenedores (inicializado desde localStorage o datos por defecto)
   const [containers, setContainers] = useState(() => {
     const saved = localStorage.getItem('nextdocker_containers');
-    return saved ? JSON.parse(saved) : initialContainers;
+    if (!saved) return initialContainers;
+    // Los datos estáticos (imágenes, textos) siempre vienen de mockData; solo se conservan campos guardados extra.
+    const savedById = Object.fromEntries(JSON.parse(saved).map((c) => [c.id, c]));
+    return initialContainers.map((c) => ({ ...savedById[c.id], ...c }));
   });
 
   // Estado de reservas del usuario
