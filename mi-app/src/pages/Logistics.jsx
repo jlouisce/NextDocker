@@ -1,18 +1,15 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { ChevronDown, Info, Route, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
 import { useApp } from '../context/AppContext';
 import { cartCatalog } from '../data/mockData';
-import iconTrash from '../assets/figma/icon-trash.svg';
-import iconRoute from '../assets/figma/icon-route.svg';
-import iconSelectArrow from '../assets/figma/icon-image.svg';
-import iconInfo from '../assets/figma/icon-info.svg';
 
 const money = (value) => `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const moneyShort = (value) => `$${value.toLocaleString('en-US')}`;
 
 export default function Logistics() {
-  const navigate = useNavigate();
+  const [orderRef, setOrderRef] = useState(null);
   const { cart: cartState, setCartOrigin, removeFromCart, clearCart, reserveContainer } = useApp();
   // El estado guarda { containerId, origin }; el resto de los datos sale del catálogo.
   const cart = cartState
@@ -31,12 +28,13 @@ export default function Logistics() {
   const total = merchandise + freight;
 
   const handleCheckout = () => {
-    cart.forEach((item) => {
+    // Retroalimentación al usuario: sin backend, solo se confirma el pedido en pantalla.
+    const ids = cart.map((item) => {
       const origin = originOf(item);
-      reserveContainer(item.containerId, `${origin.port} (${origin.code})`);
+      return reserveContainer(item.containerId, `${origin.port} (${origin.code})`);
     });
     clearCart();
-    navigate('/tracking');
+    setOrderRef(ids[0]);
   };
 
   return (
@@ -53,8 +51,18 @@ export default function Logistics() {
           </div>
 
           {cart.length === 0 && (
-            <div className="bg-white border border-[#c4c6cd] rounded-[5px] p-10 text-center text-[#44474c]">
-              Your cart is empty.
+            <div role="status" className="bg-white border border-[#c4c6cd] rounded-[5px] p-10 text-center text-[#44474c] flex flex-col items-center gap-3">
+              {orderRef ? (
+                <>
+                  <p className="text-2xl font-semibold text-[#041627]">Order placed</p>
+                  <p>Your reference is <span className="font-mono font-bold text-[#041627]">{orderRef}</span>. We will confirm dispatch details shortly.</p>
+                </>
+              ) : (
+                <p>Your cart is empty.</p>
+              )}
+              <Link to="/marketplace" className="font-mono font-bold text-sm tracking-[0.05em] text-[#041627] underline">
+                Continue shopping
+              </Link>
             </div>
           )}
 
@@ -79,7 +87,7 @@ export default function Logistics() {
                         aria-label={`Remove ${item.title}`}
                         className="pb-[3px] hover:opacity-60 transition-opacity shrink-0"
                       >
-                        <img src={iconTrash} alt="" className="h-[20.25px] w-[18px]" />
+                        <Trash2 className="size-5 text-[#44474c]" aria-hidden="true" />
                       </button>
                     </div>
                     <div className="grid grid-cols-2 gap-[11px] font-mono font-medium">
@@ -96,7 +104,7 @@ export default function Logistics() {
 
                   <div className="bg-[#f1f4f6] border border-[#c4c6cd] rounded-[3px] p-3 flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
                     <div className="flex items-center gap-[11px] text-[19px]">
-                      <img src={iconRoute} alt="" className="size-[14px] shrink-0" />
+                      <Route className="size-4 shrink-0" aria-hidden="true" />
                       <span>
                         Origin: <strong className="font-bold">{origin.port} ({origin.code})</strong>
                       </span>
@@ -115,7 +123,7 @@ export default function Logistics() {
                           </option>
                         ))}
                       </select>
-                      <img src={iconSelectArrow} alt="" className="pointer-events-none absolute right-[12px] top-1/2 -translate-y-1/2 size-[28px]" />
+                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-5 text-[#6b7280]" aria-hidden="true" />
                     </div>
                   </div>
                 </div>
@@ -160,7 +168,7 @@ export default function Logistics() {
             </div>
 
             <div className="bg-[#0b1d2d] rounded-[3px] p-4 flex gap-[11px] items-start text-[#b7c8de] text-[19px] leading-[26px]">
-              <img src={iconInfo} alt="" className="h-[18.45px] w-[15.75px] mt-[2px] shrink-0" />
+              <Info className="size-5 mt-[2px] shrink-0 text-brand-orange" aria-hidden="true" />
               <p>
                 Optimize your origins to reduce total freight costs. Estimated delivery for current routing is{' '}
                 <strong className="font-bold">14-21 days</strong>.

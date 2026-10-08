@@ -1,29 +1,29 @@
-import React from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import iconCart from '../assets/figma/icon-cart.png';
-import iconBell from '../assets/figma/icon-bell.png';
+import { Menu, ShoppingCart, X } from 'lucide-react';
+import { useApp } from '../context/AppContext';
 
 const links = [
   { to: '/marketplace', label: 'Marketplace' },
-  { to: '/tracking', label: 'Tracking' },
   { to: '/logistics', label: 'Logistics' },
   { to: '/rates', label: 'Rates' },
 ];
 
 export default function Navbar() {
-  const location = useLocation();
-  const isActive = (path) => location.pathname === path;
+  const { pathname } = useLocation();
+  const { cart } = useApp();
+  const [open, setOpen] = useState(false);
+  const isActive = (path) => pathname === path;
 
   return (
     <header className="bg-[#eef1f3] sticky top-0 z-50">
-      <div className="max-w-[1728px] mx-auto px-6 lg:px-[59px] h-[72px] lg:h-[101px] flex items-center justify-between gap-4">
-        {/* Logo */}
+      <div className="max-w-[1728px] mx-auto px-4 sm:px-6 lg:px-[59px] h-[64px] lg:h-[101px] flex items-center justify-between gap-4">
         <Link to="/" className="text-2xl lg:text-[32px] font-bold text-[#303030] tracking-tight">
           NextDocker
         </Link>
 
-        {/* Navegación */}
-        <nav className="hidden md:flex items-center gap-8 lg:gap-[40px] font-mono text-sm lg:text-base font-bold tracking-[0.07em] text-black">
+        {/* Navegación de escritorio */}
+        <nav aria-label="Main" className="hidden md:flex items-center gap-8 lg:gap-[40px] font-mono text-sm lg:text-base font-bold tracking-[0.07em] text-black">
           {links.map(({ to, label }) => (
             <Link
               key={to}
@@ -35,17 +35,44 @@ export default function Navbar() {
           ))}
         </nav>
 
-        {/* Acciones */}
-        <div className="flex items-center gap-4 lg:gap-[15px]">
-          <Link to="/logistics" aria-label="Smart Cart" className="size-[38px] flex items-center justify-center">
-            <img src={iconCart} alt="" className="h-[39px] w-[38px] object-cover" />
+        <div className="flex items-center gap-3 lg:gap-4">
+          <Link
+            to="/dashboard/login"
+            className="whitespace-nowrap font-mono font-bold text-xs sm:text-sm lg:text-base tracking-[0.07em] text-black border border-black px-2 sm:px-3 py-1.5 hover:bg-black hover:text-white transition-colors"
+          >
+            Sign in
           </Link>
-          <button type="button" aria-label="Notifications" className="size-[44px] flex items-center justify-center">
-            <img src={iconBell} alt="" className="h-[45px] w-[44px] object-cover" />
+          <Link to="/logistics" aria-label={`Smart Cart, ${cart.length} items`} className="relative p-2 text-[#303030] hover:opacity-70 transition-opacity">
+            <ShoppingCart className="size-6" aria-hidden="true" />
+            {cart.length > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-orange text-[11px] font-bold text-black flex items-center justify-center">
+                {cart.length}
+              </span>
+            )}
+          </Link>
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            aria-expanded={open}
+            aria-controls="mobile-menu"
+            aria-label={open ? 'Close menu' : 'Open menu'}
+            className="md:hidden p-2 text-[#303030]"
+          >
+            {open ? <X className="size-6" aria-hidden="true" /> : <Menu className="size-6" aria-hidden="true" />}
           </button>
-          <Link to="/profile" aria-label="Profile" className="hover:opacity-70 transition-opacity text-lg">👤</Link>
         </div>
       </div>
+
+      {/* Menú móvil */}
+      {open && (
+        <nav id="mobile-menu" aria-label="Mobile" className="md:hidden border-t border-black/10 px-4 sm:px-6 py-3 flex flex-col font-mono font-bold tracking-[0.07em]">
+          {links.map(({ to, label }) => (
+            <Link key={to} to={to} onClick={() => setOpen(false)} className={`py-3 ${isActive(to) ? 'underline underline-offset-4' : ''}`}>
+              {label}
+            </Link>
+          ))}
+        </nav>
+      )}
     </header>
   );
 }

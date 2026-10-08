@@ -1,6 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { CheckCircle2, TrendingDown, TrendingUp } from 'lucide-react';
 import Footer from '../components/Footer';
 import { ratesData } from '../data/mockData';
+
+const label = 'block font-mono font-bold text-xs tracking-[0.05em] uppercase text-[#44474c] mb-2';
+const control =
+  'w-full bg-[#f7fafc] border border-[#c4c6cd] rounded-[4px] px-4 py-3 text-base text-[#181c1e] focus:outline-none focus:border-[#041627]';
+const card = 'bg-white border border-[#c4c6cd] shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06)]';
 
 export default function Rates() {
   const [selectedRoute, setSelectedRoute] = useState(ratesData[0].id);
@@ -10,13 +16,9 @@ export default function Rates() {
 
   const activeRoute = ratesData.find((r) => r.id === Number(selectedRoute)) || ratesData[0];
 
-  // Cálculo dinámico de precio base
-  const getBasePrice = () => {
-    const rawPrice = activeRoute[equipmentType] || '$1,850';
-    return parseInt(rawPrice.replace(/[^0-9]/g, ''), 10);
-  };
-
-  const totalPrice = getBasePrice() * (quantity || 1);
+  // Cálculo dinámico de precio base (las tarifas del mock vienen como texto, p. ej. "$1,850")
+  const basePrice = parseInt(activeRoute[equipmentType].replace(/[^0-9]/g, ''), 10);
+  const totalPrice = basePrice * quantity;
 
   const handleRequestQuote = (e) => {
     e.preventDefault();
@@ -25,42 +27,42 @@ export default function Rates() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-100 text-slate-800 font-sans">
-      <section className="bg-slate-950 text-white py-12 px-6">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-3xl font-extrabold tracking-tight mb-2">Freight Rates & Indices</h1>
-          <p className="text-slate-400 text-xs">Real-time spot rates across major global shipping corridors.</p>
+    <div className="min-h-screen flex flex-col bg-[#f7fafc] text-[#181c1e] font-sans">
+      <section className="bg-[#041627] text-white py-12 lg:py-16 px-6">
+        <div className="max-w-[1100px] mx-auto">
+          <h1 className="text-4xl lg:text-5xl font-bold tracking-[-0.02em]">Freight Rates &amp; Indices</h1>
+          <p className="text-lg text-[#b7c8de] mt-2">Real-time spot rates across major global shipping corridors.</p>
         </div>
       </section>
 
-      <main className="max-w-5xl mx-auto px-6 py-12 w-full flex-1 space-y-10">
-        
-        {/* Tabla de tarifas en vivo */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-5 border-b border-slate-100">
-            <h2 className="text-base font-bold text-slate-900">Global Spot Market Rates</h2>
-            <p className="text-xs text-slate-500">Updated daily based on average container index rates.</p>
+      <main className="max-w-[1100px] mx-auto px-4 sm:px-6 py-10 lg:py-12 w-full flex-1 flex flex-col gap-8 lg:gap-10">
+        {/* Tabla de tarifas */}
+        <section className={`${card} overflow-hidden`}>
+          <div className="p-6 border-b border-[#ebeef0]">
+            <h2 className="text-xl font-semibold leading-7">Global Spot Market Rates</h2>
+            <p className="text-sm text-[#44474c] mt-1">Updated daily based on average container index rates.</p>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] tracking-wider border-b border-slate-200">
+            <table className="w-full min-w-[640px] text-left">
+              <thead className="bg-[#f7fafc] border-b border-[#c4c6cd] font-mono text-xs tracking-[0.05em] uppercase text-[#44474c]">
                 <tr>
-                  <th className="p-4">Trade Route</th>
-                  <th className="p-4">20ft Standard</th>
-                  <th className="p-4">40ft High Cube</th>
-                  <th className="p-4">Reefer</th>
-                  <th className="p-4">Weekly Trend</th>
+                  <th scope="col" className="px-6 py-4 font-bold">Trade Route</th>
+                  <th scope="col" className="px-6 py-4 font-bold">20ft Standard</th>
+                  <th scope="col" className="px-6 py-4 font-bold">40ft High Cube</th>
+                  <th scope="col" className="px-6 py-4 font-bold">Reefer</th>
+                  <th scope="col" className="px-6 py-4 font-bold">Weekly Trend</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+              <tbody className="divide-y divide-[#ebeef0] font-mono text-sm">
                 {ratesData.map((row) => (
-                  <tr key={row.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-4 text-slate-900 font-bold">{row.route}</td>
-                    <td className="p-4">{row.ft20}</td>
-                    <td className="p-4">{row.ft40}</td>
-                    <td className="p-4">{row.reefer}</td>
-                    <td className="p-4">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${row.positive ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                  <tr key={row.id} className="hover:bg-[#f7fafc] transition-colors">
+                    <td className="px-6 py-4 font-sans font-semibold text-base text-[#041627]">{row.route}</td>
+                    <td className="px-6 py-4">{row.ft20}</td>
+                    <td className="px-6 py-4">{row.ft40}</td>
+                    <td className="px-6 py-4">{row.reefer}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex items-center gap-1 rounded-[12px] px-3 py-1 font-medium ${row.positive ? 'bg-[#dcfce7] text-[#166534]' : 'bg-[#ffdad6] text-[#93000a]'}`}>
+                        {row.positive ? <TrendingUp className="size-3.5" aria-hidden="true" /> : <TrendingDown className="size-3.5" aria-hidden="true" />}
                         {row.trend}
                       </span>
                     </td>
@@ -69,21 +71,17 @@ export default function Rates() {
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
 
-        {/* Calculadora interactiva de fletes */}
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-          <h2 className="text-lg font-bold text-slate-900 mb-1">Instant Rate Calculator</h2>
-          <p className="text-xs text-slate-500 mb-6">Estimate your total freight cost based on volume and route selection.</p>
+        {/* Calculadora de fletes */}
+        <section className={`${card} p-6 lg:p-8`}>
+          <h2 className="text-xl font-semibold leading-7">Instant Rate Calculator</h2>
+          <p className="text-sm text-[#44474c] mt-1 mb-6">Estimate your total freight cost based on volume and route selection.</p>
 
-          <form onSubmit={handleRequestQuote} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          <form onSubmit={handleRequestQuote} className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 items-end">
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Select Corridor</label>
-              <select 
-                value={selectedRoute} 
-                onChange={(e) => setSelectedRoute(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold"
-              >
+              <label htmlFor="rate-route" className={label}>Select corridor</label>
+              <select id="rate-route" value={selectedRoute} onChange={(e) => setSelectedRoute(e.target.value)} className={control}>
                 {ratesData.map((r) => (
                   <option key={r.id} value={r.id}>{r.route}</option>
                 ))}
@@ -91,12 +89,8 @@ export default function Rates() {
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Container Type</label>
-              <select 
-                value={equipmentType} 
-                onChange={(e) => setEquipmentType(e.target.value)}
-                className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold"
-              >
+              <label htmlFor="rate-type" className={label}>Container type</label>
+              <select id="rate-type" value={equipmentType} onChange={(e) => setEquipmentType(e.target.value)} className={control}>
                 <option value="ft20">20ft Standard</option>
                 <option value="ft40">40ft High Cube</option>
                 <option value="reefer">Refrigerated (Reefer)</option>
@@ -104,45 +98,43 @@ export default function Rates() {
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase text-slate-500 mb-1">Units Quantity</label>
-              <input 
-                type="number" 
-                min="1" 
-                max="50" 
+              <label htmlFor="rate-quantity" className={label}>Units quantity</label>
+              <input
+                id="rate-quantity"
+                type="number"
+                min="1"
+                max="50"
                 value={quantity}
-                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                className="w-full bg-slate-50 border border-slate-300 rounded p-2 text-xs font-semibold"
+                onChange={(e) => setQuantity(Math.min(50, Math.max(1, parseInt(e.target.value, 10) || 1)))}
+                className={control}
               />
             </div>
 
-            <div>
-              <button 
-                type="submit"
-                className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold p-2.5 rounded text-xs transition-colors shadow"
-              >
-                Request Official Quote
-              </button>
-            </div>
+            <button
+              type="submit"
+              className="h-12 bg-brand-orange hover:brightness-95 transition rounded-[4px] font-mono font-bold text-xs tracking-[0.05em] uppercase text-[#181c1e] shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06)]"
+            >
+              Request official quote
+            </button>
           </form>
 
-          {/* Resultado del cálculo */}
-          <div className="mt-6 p-4 bg-slate-950 text-white rounded-lg flex justify-between items-center">
+          <div className="mt-6 p-5 bg-[#041627] text-white rounded-[4px] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <span className="text-[10px] text-slate-400 uppercase font-bold">Estimated Freight Cost</span>
-              <div className="text-2xl font-black text-amber-500">${totalPrice.toLocaleString()} USD</div>
+              <span className="font-mono font-bold text-xs tracking-[0.05em] uppercase text-[#b7c8de]">Estimated freight cost</span>
+              <div className="text-3xl font-bold text-brand-orange tracking-[-0.01em]">${totalPrice.toLocaleString('en-US')} USD</div>
             </div>
-            <div className="text-right text-[11px] text-slate-400">
-              Includes terminal handling fees (THC) & bunker adjustment factor (BAF).
-            </div>
+            <p className="text-sm text-[#b7c8de] sm:text-right max-w-[320px]">
+              Includes terminal handling fees (THC) &amp; bunker adjustment factor (BAF).
+            </p>
           </div>
 
           {quoteSuccess && (
-            <div className="mt-4 p-3 bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs rounded font-bold text-center">
-              ✓ Formal quotation request submitted successfully!
-            </div>
+            <p role="status" className="mt-4 p-3 bg-[#dcfce7] border border-[#86efac] text-[#166534] text-sm rounded-[4px] font-semibold flex items-center justify-center gap-2">
+              <CheckCircle2 className="size-4" aria-hidden="true" />
+              Formal quotation request submitted successfully!
+            </p>
           )}
-        </div>
-
+        </section>
       </main>
 
       <Footer />

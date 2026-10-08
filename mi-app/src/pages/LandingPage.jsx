@@ -1,18 +1,9 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import { Map as MapIcon, MapPin, Package, Route, Search, ShieldCheck, TrendingUp, Zap } from 'lucide-react';
 import Footer from '../components/Footer';
 import ContainerModal from '../components/ContainerModal';
 import { useApp } from '../context/AppContext';
 import heroImage from '../assets/figma/hero-container.png';
-import iconPin from '../assets/figma/icon-pin.png';
-import iconBox from '../assets/figma/icon-box.png';
-import iconSearch from '../assets/figma/icon-search.png';
-import dotGreen from '../assets/figma/dot-green.svg';
-import dotBlue from '../assets/figma/dot-blue.svg';
-import mapWatermark from '../assets/figma/map.svg';
-import featureRouting from '../assets/figma/feature-routing.png';
-import featureBooking from '../assets/figma/feature-booking.png';
-import featureRates from '../assets/figma/feature-rates.png';
-import featureCertification from '../assets/figma/feature-certification.png';
 
 const bentoCard = 'border border-[#2c2c2c] rounded-[3px] p-8';
 
@@ -48,7 +39,7 @@ export default function LandingPage() {
             <div>
               <label htmlFor="origin-port" className="block tracking-[-0.01em] mb-1">Origin Port</label>
               <div className="bg-white/90 h-[67px] flex items-center gap-4 px-[18px]">
-                <img src={iconPin} alt="" className="h-[36px] w-[30px] object-cover" />
+                <MapPin className="size-6 shrink-0" aria-hidden="true" />
                 <input
                   id="origin-port"
                   type="text"
@@ -63,7 +54,7 @@ export default function LandingPage() {
             <div>
               <label htmlFor="container-type" className="block tracking-[-0.01em] mb-1">Container type</label>
               <div className="bg-[#f1f4f6]/90 h-[67px] flex items-center gap-4 px-[11px]">
-                <img src={iconBox} alt="" className="h-[37px] w-[41px] object-cover" />
+                <Package className="size-6 shrink-0" aria-hidden="true" />
                 <select
                   id="container-type"
                   value={selectedType}
@@ -84,7 +75,7 @@ export default function LandingPage() {
                 onClick={() => catalogRef.current?.scrollIntoView({ behavior: 'smooth' })}
                 className="w-full h-[67px] bg-brand-orange/90 hover:bg-brand-orange flex items-center justify-center gap-4 text-[15px] tracking-[0.09em] transition-colors"
               >
-                <img src={iconSearch} alt="" className="h-[39px] w-[41px] object-cover" />
+                <Search className="size-6" aria-hidden="true" />
                 Search Fleet
               </button>
             </div>
@@ -107,7 +98,7 @@ export default function LandingPage() {
               <div className="relative h-[265px] bg-slate-200 overflow-hidden">
                 <img src={item.image} alt={item.title} className="size-full object-cover" />
                 <span className="absolute top-[5px] right-[10px] bg-[#f7fafc] rounded-lg h-[34px] px-3 flex items-center gap-2 font-mono text-base tracking-[-0.04em]">
-                  <img src={item.statusColor === 'emerald' ? dotGreen : dotBlue} alt="" className="size-3" />
+                  <span className={`size-3 rounded-full ${item.statusColor === 'emerald' ? 'bg-[#22c55e]' : 'bg-[#1d4ed8]'}`} />
                   {item.status}
                 </span>
               </div>
@@ -143,17 +134,17 @@ export default function LandingPage() {
 
         <div className="max-w-[1622px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-[14px]">
           <div className={`${bentoCard} relative overflow-hidden min-h-[420px] lg:min-h-[659px] lg:pl-[42px]`}>
-            <img src={featureRouting} alt="" className="h-[43px] w-[48px] object-cover -scale-y-100 mt-[10px]" />
+            <Route className="size-10 mt-[10px]" aria-hidden="true" />
             <h3 className="text-xl lg:text-[25px] font-light tracking-[0.06em] mt-[33px]">Dynamic Routing &amp; Sourcing</h3>
             <p className="font-roboto font-light text-lg lg:text-xl tracking-[0.01em] leading-[1.114] max-w-[425px] mt-3">
               Our algorithm identifies the most cost-effective container positioning based on real time-port congestion and freight lane demands.
             </p>
-            <img src={mapWatermark} alt="" className="absolute right-0 bottom-8 size-[246px] opacity-20 hidden lg:block" />
+            <MapIcon className="absolute right-4 bottom-8 size-[246px] text-black/10 hidden lg:block" strokeWidth={1} aria-hidden="true" />
           </div>
 
           <div className="flex flex-col gap-[14px]">
             <div className={`${bentoCard} bg-navy-800 text-white min-h-[200px] lg:min-h-[322px] flex items-start gap-6 lg:pl-[18px] pt-[40px]`}>
-              <img src={featureCertification} alt="" className="h-[81px] w-[96px] object-cover shrink-0" />
+              <ShieldCheck className="size-14 lg:size-[72px] shrink-0" strokeWidth={1.5} aria-hidden="true" />
               <div>
                 <h3 className="text-xl lg:text-[28px] font-semibold">Grade-A Certification</h3>
                 <p className="font-roboto font-light text-base lg:text-xl text-[#fafafa] tracking-[0.01em] mt-3">
@@ -164,14 +155,14 @@ export default function LandingPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-[14px]">
               <div className={`${bentoCard} min-h-[322px] flex flex-col lg:px-[22px]`}>
-                <img src={featureBooking} alt="" className="h-[41px] w-[43px] object-cover" />
+                <Zap className="size-10" aria-hidden="true" />
                 <h3 className="text-xl lg:text-[25px] font-light tracking-[0.06em] mt-4">Instant Booking</h3>
                 <p className="font-roboto font-light text-lg lg:text-xl tracking-[0.01em] leading-[1.114] mt-auto max-w-[273px]">
                   Bypass brokers. Secure assets instantly via secure API.
                 </p>
               </div>
               <div className={`${bentoCard} min-h-[322px] flex flex-col lg:px-[18px]`}>
-                <img src={featureRates} alt="" className="h-[43px] w-[48px] object-cover" />
+                <TrendingUp className="size-10" aria-hidden="true" />
                 <h3 className="text-xl lg:text-[25px] font-light tracking-[0.06em] mt-3">Market Rates</h3>
                 <p className="font-roboto font-light text-lg lg:text-xl tracking-[0.01em] leading-[1.114] mt-auto max-w-[357px]">
                   Transparent pricing historically pegged to global shipping indices.

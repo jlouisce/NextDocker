@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { Anchor, ArrowDown, Calculator, ChevronDown, MapPin, Route, Ruler, Ship, ShieldCheck, Shield, ShoppingCart } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Footer from '../components/Footer';
 import { useApp } from '../context/AppContext';
@@ -6,17 +7,6 @@ import { cartCatalog, ports } from '../data/mockData';
 import productMain from '../assets/figma/product-main.jpg';
 import productDetail1 from '../assets/figma/product-detail-1.jpg';
 import productDetail2 from '../assets/figma/product-detail-2.jpg';
-import iconSpecs from '../assets/figma/icon-specs.svg';
-import iconAddCart from '../assets/figma/icon-add-cart.svg';
-import iconOptimizer from '../assets/figma/icon-optimizer.svg';
-import iconSelectArrow from '../assets/figma/icon-select-arrow.svg';
-import iconAnchor from '../assets/figma/icon-anchor.svg';
-import iconSwap from '../assets/figma/icon-swap.svg';
-import iconLocation from '../assets/figma/icon-location.svg';
-import iconCalc from '../assets/figma/icon-calc.svg';
-import iconTrustIso from '../assets/figma/icon-trust-iso.svg';
-import iconTrustWarranty from '../assets/figma/icon-trust-warranty.svg';
-import iconTrustCsc from '../assets/figma/icon-trust-csc.svg';
 
 const money = (value) => `$${value.toLocaleString('en-US')}`;
 const transitDays = { CNSHA: '18 - 24 Days', NLRTM: '14 - 21 Days', USLAX: '21 - 28 Days' };
@@ -29,17 +19,6 @@ const statusStyles = {
 const tag = 'rounded-[3px] px-[11px] py-[5px] font-mono font-bold text-base tracking-[0.05em] uppercase';
 const darkCard =
   'relative overflow-hidden bg-[#1a2b3c] border border-[rgba(210,228,251,0.2)] rounded-[5px] p-[34px] flex flex-col gap-8 shadow-[0_27px_34px_-7px_rgba(0,0,0,0.1),0_13px_13px_-7px_rgba(0,0,0,0.04)]';
-
-// Icono con el recorte (25.93% abajo/derecha) que usa el diseño en los íconos de campos
-function InsetIcon({ src, className }) {
-  return (
-    <span className={className}>
-      <span className="relative block size-full">
-        <img src={src} alt="" className="absolute block max-w-none inset-[0_25.93%_25.93%_0]" />
-      </span>
-    </span>
-  );
-}
 
 export default function ProductDetail() {
   const { id } = useParams();
@@ -123,7 +102,7 @@ export default function ProductDetail() {
           <section className="pt-[22px]">
             <div className="bg-white border border-[#e0e3e5] rounded-[5px] overflow-hidden shadow-[0_5px_8px_-1px_rgba(0,0,0,0.1),0_3px_5px_-1px_rgba(0,0,0,0.06)]">
               <div className="bg-[#e0e3e5] border-b border-[#c4c6cd] px-8 py-[22px] flex items-center gap-[11px]">
-                <img src={iconSpecs} alt="" className="h-[16.2px] w-[27px]" />
+                <Ruler className="size-6" aria-hidden="true" />
                 <h2 className="text-[27px] font-semibold leading-[38px]">Technical Specifications</h2>
               </div>
               <div className="overflow-x-auto">
@@ -168,7 +147,7 @@ export default function ProductDetail() {
               onClick={handleAddToCart}
               className="bg-brand-orange hover:brightness-95 transition rounded-[5px] py-[22px] flex items-center justify-center gap-[11px] font-mono font-bold text-base tracking-[0.05em] drop-shadow-[0_1px_1px_rgba(0,0,0,0.05)]"
             >
-              <img src={iconAddCart} alt="" className="h-[28.35px] w-[27.945px]" />
+              <ShoppingCart className="size-6" aria-hidden="true" />
               {inCart ? 'View in Logistics Cart' : 'Add to Logistics Cart'}
             </button>
             <p className="text-center text-[19px] text-[#44474c] pt-[11px]">Volume discounts applied at checkout.</p>
@@ -178,7 +157,7 @@ export default function ProductDetail() {
             <div className="absolute -right-[86px] -top-[86px] size-[173px] rounded-[16px] bg-[rgba(210,228,251,0.1)] blur-[16px]" />
             <div className="relative flex flex-col gap-[5px]">
               <div className="flex items-center gap-[11px]">
-                <img src={iconOptimizer} alt="" className="size-[24.3px]" />
+                <Route className="size-6 text-brand-orange" aria-hidden="true" />
                 <h2 className="text-[27px] font-semibold text-white leading-[38px]">Logistics Optimizer</h2>
               </div>
               <p className="text-[19px] text-[#b7c8de] leading-[27px]">
@@ -196,7 +175,7 @@ export default function ProductDetail() {
               <div className="flex flex-col gap-[5px]">
                 <label htmlFor="origin-port" className="font-mono font-bold text-base text-[#d2e4fb] tracking-[0.05em] uppercase">Origin port</label>
                 <div className="relative">
-                  <InsetIcon src={iconAnchor} className="absolute left-4 top-1/2 -translate-y-1/2 h-[27px] w-[24.3px] pointer-events-none" />
+                  <Anchor className="absolute left-4 top-1/2 -translate-y-1/2 size-6 text-[#b7c8de] pointer-events-none" aria-hidden="true" />
                   <select
                     id="origin-port"
                     value={origin}
@@ -207,20 +186,20 @@ export default function ProductDetail() {
                       <option key={p.code} value={p.code} className="text-[#041627]">{p.port} ({p.code})</option>
                     ))}
                   </select>
-                  <img src={iconSelectArrow} alt="" className="absolute right-3 top-1/2 -translate-y-1/2 size-[32.4px] pointer-events-none" />
+                  <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 size-6 text-[#b7c8de] pointer-events-none" aria-hidden="true" />
                 </div>
               </div>
 
               <div className="relative h-[19px] flex justify-center">
                 <span className="absolute -top-[11px] bg-[#1a2b3c] border border-[rgba(210,228,251,0.3)] rounded-[16px] p-[7px]">
-                  <InsetIcon src={iconSwap} className="size-[12.6px]" />
+                  <ArrowDown className="size-3.5 text-brand-orange block" aria-hidden="true" />
                 </span>
               </div>
 
               <div className="flex flex-col gap-[5px]">
                 <label htmlFor="destination-port" className="font-mono font-bold text-base text-[#d2e4fb] tracking-[0.05em] uppercase">Destination port</label>
                 <div className="relative">
-                  <InsetIcon src={iconLocation} className="absolute left-4 top-1/2 -translate-y-1/2 h-[27px] w-[21.6px] pointer-events-none" />
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 size-6 text-[#74777d] pointer-events-none" aria-hidden="true" />
                   <input
                     id="destination-port"
                     type="text"
@@ -237,7 +216,7 @@ export default function ProductDetail() {
                 type="submit"
                 className="mt-[11px] bg-white hover:bg-[#f1f4f6] transition-colors border border-[#c4c6cd] rounded-[5px] py-[17px] flex items-center justify-center gap-[11px] font-mono font-bold text-base text-[#041627] tracking-[0.05em]"
               >
-                <img src={iconCalc} alt="" className="size-[24.3px]" />
+                <Calculator className="size-6" aria-hidden="true" />
                 Estimate Shipping
               </button>
             </form>
@@ -261,7 +240,7 @@ export default function ProductDetail() {
               <div className="absolute -right-[86px] -top-[86px] size-[173px] rounded-[16px] bg-[rgba(210,228,251,0.1)] blur-[16px]" />
               <div className="relative flex flex-col gap-[5px]">
                 <div className="flex items-center gap-[11px]">
-                  <img src={iconOptimizer} alt="" className="size-[24.3px]" />
+                  <Route className="size-6 text-brand-orange" aria-hidden="true" />
                   <h2 className="text-[27px] font-semibold text-white leading-[38px]">Additional Specs</h2>
                 </div>
                 <p className="text-[19px] text-[#b7c8de] leading-[27px]">Specifications for the refrigerated container.</p>
@@ -278,9 +257,9 @@ export default function ProductDetail() {
           )}
 
           <ul className="pt-[22px] flex flex-col gap-4 text-[19px] text-[#44474c]">
-            <li className="flex items-center gap-4"><img src={iconTrustIso} alt="" className="h-[22.5px] w-[18px]" />ISO 9001 Certified Manufacturing</li>
-            <li className="flex items-center gap-4"><img src={iconTrustWarranty} alt="" className="h-[22.5px] w-[18px]" />5-Year Structural Warranty</li>
-            <li className="flex items-center gap-4"><img src={iconTrustCsc} alt="" className="h-[22.5px] w-[20.752px]" />CSC Plated for International Freight</li>
+            <li className="flex items-center gap-4"><ShieldCheck className="size-5 shrink-0" aria-hidden="true" />ISO 9001 Certified Manufacturing</li>
+            <li className="flex items-center gap-4"><Shield className="size-5 shrink-0" aria-hidden="true" />5-Year Structural Warranty</li>
+            <li className="flex items-center gap-4"><Ship className="size-5 shrink-0" aria-hidden="true" />CSC Plated for International Freight</li>
           </ul>
         </aside>
       </main>

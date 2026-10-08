@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { containersData as initialContainers, initialCart, cartCatalog } from '../data/mockData';
 
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
   // Estado de contenedores (inicializado desde localStorage o datos por defecto)
-  const [containers, setContainers] = useState(() => {
+  const [containers] = useState(() => {
     const saved = localStorage.getItem('nextdocker_containers');
     if (!saved) return initialContainers;
     // Los datos estáticos (imágenes, textos) siempre vienen de mockData; solo se conservan campos guardados extra.
@@ -25,12 +25,6 @@ export function AppProvider({ children }) {
     return saved ? JSON.parse(saved) : initialCart;
   });
 
-  // Estado del usuario activo
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('nextdocker_user');
-    return saved ? JSON.parse(saved) : { name: 'Demo Logistics Manager', company: 'Global Trade Co.', email: 'manager@globaltrade.com' };
-  });
-
   // Guardar cambios en localStorage
   useEffect(() => {
     localStorage.setItem('nextdocker_containers', JSON.stringify(containers));
@@ -43,10 +37,6 @@ export function AppProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('nextdocker_cart', JSON.stringify(cart));
   }, [cart]);
-
-  useEffect(() => {
-    localStorage.setItem('nextdocker_user', JSON.stringify(user));
-  }, [user]);
 
   // Acciones del carrito (un contenedor por tipo; si ya está, no se duplica)
   const addToCart = (containerId, origin) => {
@@ -77,11 +67,7 @@ export function AppProvider({ children }) {
     };
 
     setReservations((prev) => [newReservation, ...prev]);
-  };
-
-  // Función para cancelar reserva
-  const cancelReservation = (reservationId) => {
-    setReservations((prev) => prev.filter((item) => item.id !== reservationId));
+    return newReservation.id;
   };
 
   return (
@@ -89,15 +75,12 @@ export function AppProvider({ children }) {
       value={{
         containers,
         reservations,
-        user,
-        setUser,
         cart,
         addToCart,
         removeFromCart,
         setCartOrigin,
         clearCart,
         reserveContainer,
-        cancelReservation,
       }}
     >
       {children}
@@ -105,6 +88,7 @@ export function AppProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useApp() {
   const context = useContext(AppContext);
   if (!context) {

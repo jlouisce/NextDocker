@@ -1,90 +1,105 @@
-import React, { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
+const specLabel = 'font-mono font-bold text-xs tracking-[0.05em] uppercase text-[#74777d]';
+
 export default function ContainerModal({ container, onClose }) {
-  const { reserveContainer } = useApp();
-  const [reserved, setReserved] = useState(false);
+  const { addToCart, cart } = useApp();
+  const [added, setAdded] = useState(false);
+
+  // Cerrar con Escape
+  useEffect(() => {
+    if (!container) return undefined;
+    const onKeyDown = (e) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [container, onClose]);
 
   if (!container) return null;
 
-  const handleReserve = () => {
-    setReserved(true);
-    reserveContainer(container.id);
+  const inCart = cart.some((item) => item.containerId === container.id);
+
+  // Retroalimentación breve ("Added") antes de cerrar
+  const handleAdd = () => {
+    addToCart(container.id);
+    setAdded(true);
     setTimeout(() => {
-      setReserved(false);
+      setAdded(false);
       onClose();
-    }, 500);
+    }, 600);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200">
-        
-        {/* Header */}
-        <div className="relative h-56 bg-slate-900">
-          <img src={container.image} alt={container.title} className="w-full h-full object-cover opacity-90" />
-          <button 
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-[#041627]/70 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={container.title}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-[5px] shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-[#c4c6cd]"
+      >
+        <div className="relative h-48 sm:h-56 bg-[#041627]">
+          <img src={container.image} alt="" className="size-full object-cover opacity-90" />
+          <button
+            type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 bg-slate-900/80 hover:bg-slate-900 text-white w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+            aria-label="Close"
+            className="absolute top-4 right-4 bg-[#041627]/80 hover:bg-[#041627] text-white size-9 rounded-full flex items-center justify-center"
           >
-            ✕
+            <X className="size-5" aria-hidden="true" />
           </button>
-          <div className="absolute bottom-4 left-6">
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded">
+          <div className="absolute bottom-4 left-6 right-6">
+            <span className="font-mono font-bold text-xs tracking-[0.05em] uppercase bg-brand-orange text-[#181c1e] px-2.5 py-1 rounded-[3px]">
               {container.status}
             </span>
-            <h2 className="text-2xl font-extrabold text-white mt-1">{container.title}</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white mt-2">{container.title}</h2>
           </div>
         </div>
 
-        {/* Body */}
-        <div className="p-6 space-y-6">
-          <p className="text-xs text-slate-600 leading-relaxed">{container.description}</p>
+        <div className="p-6 flex flex-col gap-6">
+          <p className="text-base text-[#44474c] leading-relaxed">{container.description}</p>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs bg-slate-50 p-4 rounded-lg border border-slate-200">
+          <dl className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-[#f7fafc] p-4 rounded-[4px] border border-[#ebeef0]">
             <div>
-              <div className="text-slate-400 font-medium">Volume Cap</div>
-              <div className="font-bold text-slate-900 mt-0.5">{container.cap}</div>
+              <dt className={specLabel}>Volume cap</dt>
+              <dd className="font-mono font-semibold text-sm text-[#041627] mt-1">{container.cap}</dd>
             </div>
             <div>
-              <div className="text-slate-400 font-medium">Max Payload</div>
-              <div className="font-bold text-slate-900 mt-0.5">{container.maxWeight}</div>
+              <dt className={specLabel}>Max payload</dt>
+              <dd className="font-mono font-semibold text-sm text-[#041627] mt-1">{container.maxWeight}</dd>
             </div>
             <div>
-              <div className="text-slate-400 font-medium">Tare Weight</div>
-              <div className="font-bold text-slate-900 mt-0.5">{container.tare}</div>
+              <dt className={specLabel}>Tare weight</dt>
+              <dd className="font-mono font-semibold text-sm text-[#041627] mt-1">{container.tare}</dd>
             </div>
             <div>
-              <div className="text-slate-400 font-medium">ISO Code</div>
-              <div className="font-bold text-slate-900 mt-0.5 font-mono">{container.iso}</div>
+              <dt className={specLabel}>ISO code</dt>
+              <dd className="font-mono font-semibold text-sm text-[#041627] mt-1">{container.iso}</dd>
             </div>
-          </div>
+          </dl>
         </div>
 
-        {/* Footer Actions */}
-        <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+        <div className="px-6 py-4 bg-[#f7fafc] border-t border-[#ebeef0] flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
           <Link
             to={`/containers/${container.id}`}
-            className="px-4 py-2 border border-slate-300 text-slate-700 font-bold text-xs rounded hover:bg-slate-100"
+            className="px-5 py-3 text-center border border-[#041627] text-[#041627] font-mono font-bold text-xs tracking-[0.05em] uppercase rounded-[4px] hover:bg-[#041627] hover:text-white transition-colors"
           >
             View details
           </Link>
           <button
-            onClick={onClose}
-            className="px-4 py-2 border border-slate-300 text-slate-700 font-bold text-xs rounded hover:bg-slate-100"
+            type="button"
+            onClick={handleAdd}
+            disabled={added || inCart}
+            className="px-5 py-3 bg-brand-orange hover:brightness-95 transition text-[#181c1e] font-mono font-bold text-xs tracking-[0.05em] uppercase rounded-[4px] disabled:opacity-60"
           >
-            Close
-          </button>
-          <button 
-            onClick={handleReserve}
-            disabled={reserved}
-            className="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded transition-colors shadow disabled:opacity-50"
-          >
-            {reserved ? 'Reserving...' : 'Reserve Equipment'}
+            {inCart ? 'Already in cart' : added ? 'Added' : 'Add to cart'}
           </button>
         </div>
-
       </div>
     </div>
   );

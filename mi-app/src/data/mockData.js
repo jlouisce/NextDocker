@@ -147,3 +147,41 @@ export const initialCart = [
   { containerId: '40ft-hc', origin: 'NLRTM' },
   { containerId: '20ft', origin: 'CNSHA' },
 ];
+
+// Carriers del Dashboard (tarifas de ejemplo para el contenedor 40' HC; otros equipos aplican un factor)
+export const equipmentOptions = [
+  { id: '20ft', label: "20' Standard (ST)", factor: 0.6 },
+  { id: '40ft-hc', label: "40' High Cube (HC)", factor: 1 },
+  { id: 'reefer', label: "20' Refrigerated (RF)", factor: 1.3 },
+];
+
+export const lanesData = [
+  {
+    id: 'oceania',
+    carrier: 'Oceania Line',
+    logo: 'oceania',
+    status: 'Available',
+    transit: '18-21 Days',
+    frequency: 'Weekly (Mon)',
+    breakdown: [['Base Ocean Freight', 2450], ['BAF (Fuel)', 380], ['CAF', 120], ['Port Handling (THC)', 250], ['Documentation', 50]],
+  },
+  {
+    id: 'pacific',
+    carrier: 'Pacific Freight',
+    logo: 'pacific',
+    status: 'Available',
+    transit: '20-24 Days',
+    frequency: 'Bi-Weekly',
+    breakdown: [['Base Ocean Freight', 2330], ['BAF (Fuel)', 370], ['CAF', 110], ['Port Handling (THC)', 240], ['Documentation', 50]],
+  },
+  {
+    id: 'express',
+    carrier: 'Express Logistics',
+    logo: 'express',
+    status: 'Limited Space',
+    fastest: true,
+    transit: '14-16 Days',
+    frequency: 'Weekly (Fri)',
+    breakdown: [['Base Ocean Freight', 3200], ['BAF (Fuel)', 480], ['CAF', 170], ['Port Handling (THC)', 250], ['Documentation', 50]],
+  },
+];
