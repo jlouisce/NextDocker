@@ -19,6 +19,7 @@ export const containersData = [
     // Detalle de producto (datos de ejemplo; las specs de 20ft siguen el estándar ISO, no vienen de Figma)
     price: 2100,
     badge: 'Standard',
+    detailTitle: '20ft Standard Steel Container',
     longDescription: 'Industrial-grade corrugated Corten steel container built for dry cargo across standard shipping lanes.',
     specs: [
       ['External Length', '6,058 mm', '19\' 10.5"'],

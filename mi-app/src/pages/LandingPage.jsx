@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Map as MapIcon, MapPin, Package, Route, Search, ShieldCheck, TrendingUp, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
-import ContainerModal from '../components/ContainerModal';
 import { useApp } from '../context/AppContext';
 import heroImage from '../assets/figma/hero-container.png';
 
@@ -11,7 +11,6 @@ export default function LandingPage() {
   const { containers } = useApp();
   const [selectedType, setSelectedType] = useState('ALL');
   const [searchPort, setSearchPort] = useState('');
-  const [selectedContainer, setSelectedContainer] = useState(null);
   const catalogRef = useRef(null);
 
   const filteredContainers = containers.filter((item) => {
@@ -110,13 +109,12 @@ export default function LandingPage() {
                   <span>{item.capLabel || 'Cap'}: {item.cap}</span>
                   <span>{item.maxLabel || 'Max'}: {item.maxWeight}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setSelectedContainer(item)}
-                  className="h-[41px] w-full bg-[#fcfcfc] border border-[#262626] text-[#222] font-mono text-lg hover:bg-[#262626] hover:text-white transition-colors"
+                <Link
+                  to={`/containers/${item.id}`}
+                  className="h-[41px] w-full flex items-center justify-center bg-[#fcfcfc] border border-[#262626] text-[#222] font-mono text-lg hover:bg-[#262626] hover:text-white transition-colors"
                 >
                   View Inventory
-                </button>
+                </Link>
               </div>
             </article>
           ))}
@@ -175,10 +173,6 @@ export default function LandingPage() {
 
       <Footer />
 
-      <ContainerModal
-        container={selectedContainer}
-        onClose={() => setSelectedContainer(null)}
-      />
     </div>
   );
 }
