@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NextDocker | Marketplace</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="topbar">
+    <div class="logo">NextDocker</div>
+
+    <nav class="main-nav">
+      <a href="#" class="active">Marketplace</a>
+      <a href="#">Tracking</a>
+      <a href="#">Logistics</a>
+      <a href="#">Rates</a>
+    </nav>
+
+    <div class="header-actions">
+      <div class="search-box">
+        <span class="icon-search">&#128269;</span>
+        <input type="text" placeholder="Search...">
+      </div>
+      <button class="icon-btn" aria-label="Carrito">&#128722;</button>
+      <button class="icon-btn" aria-label="Notificaciones">&#128276;</button>
+    </div>
+  </header>
+
+  <!-- ===== MAIN LAYOUT ===== -->
+  <div class="page">
+
+    <!-- ===== SIDEBAR / FILTERS ===== -->
+    <aside class="filters">
+      <h2>Filters</h2>
+
+      <div class="filter-group">
+        <h3>Condition</h3>
+        <label class="checkbox">
+          <input type="checkbox" checked>
+          New (One Trip)
+        </label>
+        <label class="checkbox">
+          <input type="checkbox">
+          Cargo Worthy
+        </label>
+        <label class="checkbox">
+          <input type="checkbox">
+          As-Is
+        </label>
+      </div>
+
+      <div class="filter-group">
+        <h3>Price Range</h3>
+        <div class="price-range">
+          <input type="number" value="2000">
+          <span> </span>
+          <input type="number" value="5000">
+        </div>
+      </div>
+
+      <div class="filter-group">
+        <h3>Container Color</h3>
+        <div class="color-swatches">
+          <button class="swatch blue selected" aria-label="Azul"></button>
+          <button class="swatch red" aria-label="Rojo"></button>
+          <button class="swatch green" aria-label="Verde"></button>
+          <button class="swatch grey" aria-label="Gris"></button>
+          <button class="swatch orange" aria-label="Naranja"></button>
+        </div>
+      </div>
+
+      <button class="clear-btn">Clear Filters</button>
+    </aside>
+
+    <!-- ===== RESULTS ===== -->
+    <main class="results">
+
+      <div class="results-header">
+        <div>
+          <h1>Search Results</h1>
+          <p class="results-subtitle">"40ft High Cube in Port of Rotterdam" - 24 matches</p>
+        </div>
+
+        <div class="sort-box">
+          <label for="sort">Sort:</label>
+          <select id="sort">
+            <option>Price: Low to High</option>
+            <option>Price: High to Low</option>
+            <option>Newest First</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="cards-grid">
+
+        <!-- CARD 1 -->
+        <article class="card">
+          <div class="card-image">
+            <span class="badge badge-available">&#9679; Available</span>
+            <!-- Imagen: guárdala en la carpeta img/ -->
+            <img src="file:///Users/juanandres/Desktop/Historie-rejdare-Maersk-Line.jpg" alt="Contenedor 40' High Cube de Maersk en terminal">
+          </div>
+          <div class="card-body">
+            <div class="card-title-row">
+              <h3>40' High Cube</h3>
+              <span class="price">$3,250</span>
+            </div>
+            <p class="location">&#128205; Rotterdam Gateway, Terminal D</p>
+
+            <div class="spec-grid">
+              <div class="spec">
+                <span class="spec-label">Condition</span>
+                <span class="spec-value">Cargo Worthy</span>
+              </div>
+              <div class="spec">
+                <span class="spec-label">Mfg Year</span>
+                <span class="spec-value">2018</span>
+              </div>
+            </div>
+
+            <div class="card-actions">
+              <button class="btn-buy">Buy Now</button>
+              <button class="btn-truck" aria-label="Opciones de transporte">&#128666;</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- CARD 2 -->
+        <article class="card">
+          <div class="card-image">
+            <span class="badge badge-newtrip">&#9679; New One Trip</span>
+            <img src="file:///Users/juanandres/Desktop/images-7.jpg" alt="Contenedor 40' HC Premium naranja de NextDocker">
+          </div>
+          <div class="card-body">
+            <div class="card-title-row">
+              <h3>40' HC Premium</h3>
+              <span class="price">$4,800</span>
+            </div>
+            <p class="location">&#128205; Maasvlakte 2, Rotterdam</p>
+
+            <div class="spec-grid">
+              <div class="spec">
+                <span class="spec-label">Condition</span>
+                <span class="spec-value">New (One Trip)</span>
+              </div>
+              <div class="spec">
+                <span class="spec-label">Mfg Year</span>
+                <span class="spec-value">2023</span>
+              </div>
+            </div>
+
+            <div class="card-actions">
+              <button class="btn-buy">Buy Now</button>
+              <button class="btn-truck" aria-label="Opciones de transporte">&#128666;</button>
+            </div>
+          </div>
+        </article>
+
+      </div>
+
+      <div class="load-more-wrap">
+        <button class="btn-load-more">Load More Results</button>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="site-footer">
+    <div class="footer-left">
+      <span class="footer-logo">&#9875; NextDocker</span>
+    </div>
+    <nav class="footer-links">
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms of Service</a>
+      <a href="#">Port Network</a>
+      <a href="#">Support</a>
+    </nav>
+    <div class="footer-right">2024 NextDocker Logistics. All rights reserved.</div>
+  </footer>
+
+</body>
+</html>
