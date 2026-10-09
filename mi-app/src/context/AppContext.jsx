@@ -40,6 +40,7 @@ const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const [containers] = useState(defaultContainers);
+<<<<<<< HEAD
   const [user, setUser] = useState({ name: 'Sarah Jenkins', email: 's.jenkins@transglobal.com', company: 'Logistics Director' });
   const [reservations, setReservations] = useState([]);
   const [favorites, setFavorites] = useState([]);
@@ -94,6 +95,84 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{ containers, user, updateUser, reservations, addReservation, cancelReservation, favorites, toggleFavorite }}>
+=======
+
+  // Usuario nulo por defecto o cargado de localStorage
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nd_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [reservations, setReservations] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nd_reservations');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('nd_user', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('nd_user');
+    }
+  }, [user]);
+
+  useEffect(() => {
+    localStorage.setItem('nd_reservations', JSON.stringify(reservations));
+  }, [reservations]);
+
+  // Función para registrar usuarios según su ROL
+  const registerUser = (userData) => {
+    setUser(userData);
+    return userData;
+  };
+
+  const logoutUser = () => {
+    setUser(null);
+  };
+
+  const addReservation = (item) => {
+    if (!item) return;
+    const newBooking = {
+      ...item,
+      bookingId: `BK-${Date.now().toString().slice(-6)}`,
+      createdAt: new Date().toISOString(),
+      userName: user?.name || 'Observador Anónimo'
+    };
+    
+    setReservations((prev) => [...prev, newBooking]);
+    return newBooking;
+  };
+
+  const cancelReservation = (id) => {
+    setReservations((prev) => prev.filter((item) => (item.id || item.bookingId) !== id));
+  };
+
+  const updateUser = (updatedFields) => {
+    setUser((prev) => ({ ...prev, ...updatedFields }));
+  };
+
+  return (
+    <AppContext.Provider 
+      value={{ 
+        containers, 
+        user, 
+        registerUser, 
+        logoutUser, 
+        updateUser, 
+        reservations, 
+        addReservation, 
+        cancelReservation 
+      }}
+    >
+>>>>>>> avances-juano
       {children}
     </AppContext.Provider>
   );
@@ -104,6 +183,7 @@ export const useApp = () => {
   if (!context) {
     return {
       containers: defaultContainers,
+<<<<<<< HEAD
       user: { name: 'Sarah Jenkins', email: 's.jenkins@transglobal.com', company: 'Logistics Director' },
       reservations: [],
       favorites: [],
@@ -111,6 +191,15 @@ export const useApp = () => {
       cancelReservation: () => {},
       updateUser: () => {},
       toggleFavorite: () => {}
+=======
+      user: null,
+      registerUser: () => {},
+      logoutUser: () => {},
+      updateUser: () => {},
+      reservations: [],
+      addReservation: () => {},
+      cancelReservation: () => {}
+>>>>>>> avances-juano
     };
   }
   return context;
