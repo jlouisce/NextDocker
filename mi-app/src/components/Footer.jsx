@@ -1,23 +1,16 @@
-import React from 'react';
+import { Ship } from 'lucide-react';
 
 export default function Footer() {
   return (
-    <footer className="bg-slate-950 text-slate-400 text-xs py-8 border-t border-slate-800 mt-auto">
-      <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div className="flex items-center gap-2 text-white font-bold text-sm">
-          <span>⚓</span> NextDocker
+    <footer className="bg-navy-800 text-[#eaeaea] mt-auto">
+      <div className="max-w-[1728px] mx-auto px-6 lg:px-[45px] py-8 lg:h-[125px] flex flex-col lg:flex-row justify-between items-center gap-4 text-center">
+        <div className="flex items-center gap-3 text-2xl lg:text-[32px] font-bold">
+          <Ship className="size-8" aria-hidden="true" />
+          NextDocker
         </div>
-
-        <div className="flex items-center gap-6">
-          <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-          <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-          <a href="#" className="hover:text-white transition-colors">Port Network</a>
-          <a href="#" className="hover:text-white transition-colors">Support</a>
-        </div>
-
-        <div>
+        <p className="font-roboto font-light text-base lg:text-xl tracking-[0.01em]">
           2024 NextDocker Logistics. All rights reserved.
-        </div>
+        </p>
       </div>
     </footer>
   );

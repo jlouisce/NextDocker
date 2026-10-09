@@ -1,66 +1,82 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { Menu, X, Ship, Heart } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function Navbar() {
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
   const location = useLocation();
-  const { reservations } = useApp();
+  const { reservations = [], favorites = [] } = useApp();
+  const [open, setOpen] = useState(false);
+
+  const links = [
+    { to: '/marketplace', label: 'Marketplace' },
+    { to: '/tracking', label: 'Tracking' },
+    { to: '/logistics', label: 'Logistics' },
+    { to: '/rates', label: 'Rates' },
+    { to: '/profile', label: `Profile (${reservations.length})` }
+  ];
+
   const isActive = (path) => location.pathname === path;
 
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        {/* Logo */}
-        <Link to="/" className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-          <span>⚓</span> NextDocker
+    <header className="bg-slate-950 text-white border-b border-slate-800 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        
+        {/* LOGO */}
+        <Link to="/" className="flex items-center gap-2 font-extrabold text-lg text-amber-500 tracking-wider">
+          <Ship className="w-6 h-6 text-amber-500" />
+          <span>NextDocker</span>
         </Link>
 
-        {/* Desktop Nav */}
-        <nav className="hidden md:flex items-center gap-8 text-xs font-semibold text-slate-600">
-          <Link to="/marketplace" className={isActive('/marketplace') || isActive('/') ? 'text-black font-bold border-b-2 border-black pb-1' : 'hover:text-black transition-colors'}>
-            Marketplace
-          </Link>
-          <Link to="/tracking" className={isActive('/tracking') ? 'text-black font-bold border-b-2 border-black pb-1' : 'hover:text-black transition-colors'}>
-            Tracking
-          </Link>
-          <Link to="/logistics" className={isActive('/logistics') ? 'text-black font-bold border-b-2 border-black pb-1' : 'hover:text-black transition-colors'}>
-            Logistics
-          </Link>
-          <Link to="/rates" className={isActive('/rates') ? 'text-black font-bold border-b-2 border-black pb-1' : 'hover:text-black transition-colors'}>
-            Rates
-          </Link>
+        {/* NAVEGACIÓN ESCRITORIO */}
+        <nav className="hidden md:flex items-center gap-6 text-xs font-bold uppercase tracking-wider">
+          {links.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              className={`transition-colors py-1 ${
+                isActive(link.to)
+                  ? 'text-amber-400 border-b-2 border-amber-400'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
+
+          {/* Favoritos */}
+          <span className="bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-rose-400 text-[11px] flex items-center gap-1">
+            <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
+            {favorites.length}
+          </span>
         </nav>
 
-        {/* User Profile Link */}
-        <div className="flex items-center gap-4">
-          <Link to="/profile" className="relative p-2 hover:bg-slate-100 rounded-full text-sm flex items-center gap-1">
-            <span>👤</span>
-            {reservations.length > 0 && (
-              <span className="absolute -top-1 -right-1 bg-amber-500 text-slate-950 font-bold text-[10px] w-4 h-4 rounded-full flex items-center justify-center">
-                {reservations.length}
-              </span>
-            )}
-          </Link>
-
-          <button 
-            onClick={() => setIsMobileOpen(!isMobileOpen)}
-            className="md:hidden p-2 text-slate-700 hover:bg-slate-100 rounded-lg text-lg"
-          >
-            {isMobileOpen ? '✕' : '☰'}
-          </button>
-        </div>
+        {/* BOTÓN MÓVIL */}
+        <button
+          onClick={() => setOpen(!open)}
+          className="md:hidden text-slate-300 hover:text-white p-2"
+          aria-label="Toggle Navigation"
+        >
+          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
       </div>
 
-      {/* Mobile Drawer */}
-      {isMobileOpen && (
-        <div className="md:hidden bg-white border-b border-slate-200 px-6 py-4 space-y-3 text-sm font-semibold">
-          <Link to="/marketplace" onClick={() => setIsMobileOpen(false)} className="block py-1 text-slate-800">Marketplace</Link>
-          <Link to="/tracking" onClick={() => setIsMobileOpen(false)} className="block py-1 text-slate-800">Tracking</Link>
-          <Link to="/logistics" onClick={() => setIsMobileOpen(false)} className="block py-1 text-slate-800">Logistics</Link>
-          <Link to="/rates" onClick={() => setIsMobileOpen(false)} className="block py-1 text-slate-800">Rates</Link>
-          <Link to="/profile" onClick={() => setIsMobileOpen(false)} className="block py-1 text-amber-600 font-bold">My Profile ({reservations.length})</Link>
-        </div>
+      {/* MENÚ DESPLEGABLE MÓVIL */}
+      {open && (
+        <nav className="md:hidden bg-slate-900 border-b border-slate-800 px-6 py-4 space-y-3">
+          {links.map((link) => (
+            <Link
+              key={link.to}
+              to={link.to}
+              onClick={() => setOpen(false)}
+              className={`block text-xs font-bold uppercase py-1.5 ${
+                isActive(link.to) ? 'text-amber-400' : 'text-slate-300'
+              }`}
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
       )}
     </header>
   );

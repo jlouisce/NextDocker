@@ -29,9 +29,25 @@ Before setting up the project locally, make sure you have installed and configur
 * A [Firebase](https://firebase.google.com/) account with the Firebase CLI installed (`npm install -g firebase-tools`).
 * API keys from your designated shipping/freight rate service provider.
 
+## 📌 Estado actual (MVP v0.2)
+
+El código actual es un **frontend-only** en JavaScript (React + Vite + Tailwind + React Router) dentro de `mi-app/`. Usa datos mock (`src/data/mockData.js`) y persiste en `localStorage`. TypeScript, Supabase, Firebase y la API de fletes descritos arriba son el stack objetivo y aún no están integrados.
+
+Páginas: Landing/Marketplace (`/`, `/marketplace`), Tracking, Logistics, Rates y Profile.
+
 ## ⚙️ Setup & Installation
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/your-username/nextdocker.git](https://github.com/your-username/nextdocker.git)
-   cd nextdocker
+   git clone https://github.com/jlouisce/NextDocker.git
+   cd NextDocker/mi-app
+   ```
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+3. **Run the dev server:**
+   ```bash
+   npm run dev
+   ```
+4. **Other scripts:** `npm run build`, `npm run preview`, `npm run lint`.
