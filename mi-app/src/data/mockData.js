@@ -1,187 +1,42 @@
-import container20ft from '../assets/figma/hero-container.png';
-import container40ftHc from '../assets/figma/container-40ft-hc.png';
-import containerReefer from '../assets/figma/container-reefer.png';
-import cart20ft from '../assets/figma/cart-20ft.jpg';
-import cart40ft from '../assets/figma/cart-40ft.jpg';
-
-export const containersData = [
+export const containers = [
   {
-    id: '20ft',
-    title: '20ft Standard',
+    id: 'CONT-20FT-STD',
+    title: '20ft Standard Dry Container',
+    type: '20ft Standard',
+    port: 'Shanghai (CNSHA)',
+    price: 2400,
     status: 'Available',
-    statusColor: 'emerald',
-    image: container20ft,
-    description: 'The industry workhorse. Ideal for heavy goods and dry cargo across standard shipping lanes.',
-    cap: '33.2 CBM',
-    maxWeight: '28,200 KG',
-    tare: '2,200 KG',
-    iso: '22G1',
-    // Detalle de producto (datos de ejemplo; las specs de 20ft siguen el estándar ISO, no vienen de Figma)
-    price: 2100,
-    badge: 'Standard',
-    longDescription: 'Industrial-grade corrugated Corten steel container built for dry cargo across standard shipping lanes.',
-    specs: [
-      ['External Length', '6,058 mm', '19\' 10.5"'],
-      ['External Width', '2,438 mm', '8\' 0"'],
-      ['External Height', '2,591 mm', '8\' 6"'],
-      ['Tare Weight', '2,200 kg', '4,850 lbs'],
-      ['Max Payload', '28,200 kg', '62,170 lbs'],
-      ['Internal Cubic Capacity', '33.2 m³', '1,172 ft³'],
-    ],
+    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80',
+    description: 'Standard multi-purpose cargo container suitable for general intermodal freight transport.',
+    specs: { capacity: '33.2 CBM', maxPayload: '28,200 kg', tareWeight: '2,300 kg', dimensions: '20ft x 8ft x 8.5ft' }
   },
   {
-    id: '40ft-hc',
-    title: '40ft High Cube',
+    id: 'CONT-40FT-HC',
+    title: '40ft High Cube Container',
+    type: '40ft High Cube',
+    port: 'Rotterdam (NLRTM)',
+    price: 3800,
     status: 'Available',
-    statusColor: 'emerald',
-    image: container40ftHc,
-    description: 'Maximum volume efficiency. Designed for lighter, voluminous cargo demanding extra headspace.',
-    cap: '76.4 CBM',
-    maxWeight: '28,600 KG',
-    tare: '3,800 KG',
-    iso: '45G1',
-    price: 3450,
-    badge: 'High Cube',
-    longDescription: 'Industrial-grade corrugated Corten steel container designed for maximum cargo capacity and structural resilience in global ocean freight.',
-    detailTitle: '40ft High Cube Steel Container',
-    specs: [
-      ['External Length', '12,192 mm', '40\' 0"'],
-      ['External Width', '2,438 mm', '8\' 0"'],
-      ['External Height', '2,896 mm', '9\' 6"'],
-      ['Tare Weight', '3,900 kg', '8,598 lbs'],
-      ['Max Payload', '28,600 kg', '63,052 lbs'],
-      ['Internal Cubic Capacity', '76.3 m³', '2,694 ft³'],
-    ],
+    image: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80',
+    description: 'Extra-height container providing additional vertical clearance for high-volume cargo.',
+    specs: { capacity: '76.2 CBM', maxPayload: '28,600 kg', tareWeight: '3,900 kg', dimensions: '40ft x 8ft x 9.5ft' }
   },
   {
-    id: 'reefer',
+    id: 'CONT-REEFER',
     title: 'Refrigerated (Reefer)',
+    type: 'Refrigerated (Reefer)',
+    port: 'Los Angeles (USLAX)',
+    price: 4500,
     status: 'Limited',
-    statusColor: 'amber',
-    image: containerReefer,
-    description: 'Precision climate control. Engineered for perishable goods requiring strict temperature adherence.',
-    capLabel: 'Temp',
-    cap: '-30°C to +30°C',
-    maxLabel: 'Power',
-    maxWeight: '380/460V AC',
-    tare: '4,480 KG',
-    iso: '45R1',
-    price: 3450,
-    badge: 'Refrigerated',
-    longDescription: 'Precision climate control. Engineered for perishable goods requiring strict temperature adherence.',
-    specs: [
-      ['External Length', '6,058 mm', '19\' 10.5"'],
-      ['External Width', '2,438 mm', '8\' 0"'],
-      ['External Height', '2,591 mm', '8\' 6"'],
-      ['Tare Weight', '2,300 kg', '5,070 lbs'],
-      ['Max Payload', '28,180 kg', '62,130 lbs'],
-      ['Internal Cubic Capacity', '33.2 m³', '1,172 ft³'],
-    ],
-    // Bloque "Additional Specs" del detalle
-    extras: [
-      ['Temp:', '-30°C to +38°C'],
-      ['Power:', '380/460V AC'],
-    ],
+    image: 'https://images.unsplash.com/photo-1494412574643-ff11b0a5c1c3?auto=format&fit=crop&w=800&q=80',
+    description: 'Precision climate-controlled unit for temperature-sensitive perishable goods.',
+    specs: { capacity: '28.3 CBM', maxPayload: '27,400 kg', tareWeight: '3,080 kg', dimensions: '20ft x 8ft x 8.5ft' }
   }
 ];
 
 export const ratesData = [
-  { id: 1, route: 'Shanghai (CNSHA) → Rotterdam (NLRTM)', ft20: '$1,850', ft40: '$2,950', reefer: '$3,800', trend: '+1.8%', positive: true },
-  { id: 2, route: 'Ningbo (CNNGB) → Los Angeles (USLAX)', ft20: '$2,100', ft40: '$3,200', reefer: '$4,150', trend: '-0.5%', positive: false },
-  { id: 3, route: 'Singapore (SGSIN) → Hamburg (DEHAM)', ft20: '$1,720', ft40: '$2,780', reefer: '$3,600', trend: '+2.4%', positive: true },
-  { id: 4, route: 'Antwerp (BEANT) → New York (USNYC)', ft20: '$1,450', ft40: '$2,250', reefer: '$3,100', trend: '0.0%', positive: true }
-];
-
-// Puertos de origen disponibles en el cotizador y el carrito (flete base = dato de ejemplo hasta tener la API de fletes).
-export const ports = [
-  { code: 'CNSHA', port: 'Shanghai' },
-  { code: 'NLRTM', port: 'Rotterdam' },
-  { code: 'USLAX', port: 'Los Angeles' },
-];
-
-// Catálogo del carrito (Smart Cart), por id de contenedor. `freight` por origen es dato de ejemplo.
-export const cartCatalog = {
-  '40ft-hc': {
-    title: '40ft High Cube Dry Container',
-    sku: 'HCD-40-BLU-892',
-    payload: '28,600 kg',
-    unitCost: 3200,
-    image: cart40ft,
-    baseOrigin: 'NLRTM',
-    origins: [
-      { code: 'NLRTM', port: 'Rotterdam', freight: 1850 },
-      { code: 'CNSHA', port: 'Shanghai', freight: 1500 },
-      { code: 'USLAX', port: 'Los Angeles', freight: 2300 },
-    ],
-  },
-  '20ft': {
-    title: '20ft Standard Dry Container',
-    sku: 'STD-20-BLU-441',
-    payload: '21,770 kg',
-    unitCost: 2100,
-    image: cart20ft,
-    baseOrigin: 'CNSHA',
-    origins: [
-      { code: 'CNSHA', port: 'Shanghai', freight: 1200 },
-      { code: 'NLRTM', port: 'Rotterdam', freight: 1350 },
-      { code: 'USLAX', port: 'Los Angeles', freight: 1750 },
-    ],
-  },
-  reefer: {
-    title: 'Refrigerated Container',
-    sku: 'RFR-20-WHT-107',
-    payload: '28,180 kg',
-    unitCost: 3450,
-    image: containerReefer,
-    baseOrigin: 'CNSHA',
-    origins: [
-      { code: 'CNSHA', port: 'Shanghai', freight: 2400 },
-      { code: 'NLRTM', port: 'Rotterdam', freight: 2650 },
-      { code: 'USLAX', port: 'Los Angeles', freight: 3100 },
-    ],
-  },
-};
-
-// Carrito inicial de demostración (igual al diseño de Figma).
-export const initialCart = [
-  { containerId: '40ft-hc', origin: 'NLRTM' },
-  { containerId: '20ft', origin: 'CNSHA' },
-];
-
-// Carriers del Dashboard (tarifas de ejemplo para el contenedor 40' HC; otros equipos aplican un factor)
-export const equipmentOptions = [
-  { id: '20ft', label: "20' Standard (ST)", factor: 0.6 },
-  { id: '40ft-hc', label: "40' High Cube (HC)", factor: 1 },
-  { id: 'reefer', label: "20' Refrigerated (RF)", factor: 1.3 },
-];
-
-export const lanesData = [
-  {
-    id: 'oceania',
-    carrier: 'Oceania Line',
-    logo: 'oceania',
-    status: 'Available',
-    transit: '18-21 Days',
-    frequency: 'Weekly (Mon)',
-    breakdown: [['Base Ocean Freight', 2450], ['BAF (Fuel)', 380], ['CAF', 120], ['Port Handling (THC)', 250], ['Documentation', 50]],
-  },
-  {
-    id: 'pacific',
-    carrier: 'Pacific Freight',
-    logo: 'pacific',
-    status: 'Available',
-    transit: '20-24 Days',
-    frequency: 'Bi-Weekly',
-    breakdown: [['Base Ocean Freight', 2330], ['BAF (Fuel)', 370], ['CAF', 110], ['Port Handling (THC)', 240], ['Documentation', 50]],
-  },
-  {
-    id: 'express',
-    carrier: 'Express Logistics',
-    logo: 'express',
-    status: 'Limited Space',
-    fastest: true,
-    transit: '14-16 Days',
-    frequency: 'Weekly (Fri)',
-    breakdown: [['Base Ocean Freight', 3200], ['BAF (Fuel)', 480], ['CAF', 170], ['Port Handling (THC)', 250], ['Documentation', 50]],
-  },
+  { route: 'Shanghai (CNSHA) ➔ Rotterdam (NLRTM)', std20: 1850, hc40: 2950, reefer: 3800, trend: '+1.8%' },
+  { route: 'Ningbo (CNNGB) ➔ Los Angeles (USLAX)', std20: 2100, hc40: 3200, reefer: 4150, trend: '-0.5%' },
+  { route: 'Singapore (SGSIN) ➔ Hamburg (DEHAM)', std20: 1720, hc40: 2780, reefer: 3600, trend: '+2.4%' },
+  { route: 'Antwerp (BEANT) ➔ New York (USNYC)', std20: 1450, hc40: 2250, reefer: 3100, trend: '+0.0%' }
 ];

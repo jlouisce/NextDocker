@@ -1,98 +1,117 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { containersData as initialContainers, initialCart, cartCatalog } from '../data/mockData';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
-const AppContext = createContext();
+const defaultContainers = [
+  {
+    id: 'CONT-20FT-STD',
+    title: '20ft Standard Dry Container',
+    type: '20ft Standard',
+    port: 'Shanghai (CNSHA)',
+    price: 2400,
+    status: 'Available',
+    image: 'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&q=80',
+    description: 'Standard multi-purpose cargo container suitable for general intermodal freight transport.',
+    specs: { capacity: '33.2 CBM', maxPayload: '28,200 kg', tareWeight: '2,300 kg', dimensions: '20ft x 8ft x 8.5ft' }
+  },
+  {
+    id: 'CONT-40FT-HC',
+    title: '40ft High Cube Container',
+    type: '40ft High Cube',
+    port: 'Rotterdam (NLRTM)',
+    price: 3800,
+    status: 'Available',
+    image: 'https://images.unsplash.com/photo-1578575437130-527eed3abbec?auto=format&fit=crop&w=800&q=80',
+    description: 'Extra-height container providing additional vertical clearance for high-volume cargo.',
+    specs: { capacity: '76.2 CBM', maxPayload: '28,600 kg', tareWeight: '3,900 kg', dimensions: '40ft x 8ft x 9.5ft' }
+  },
+  {
+    id: 'CONT-REEFER',
+    title: 'Refrigerated (Reefer)',
+    type: 'Refrigerated (Reefer)',
+    port: 'Los Angeles (USLAX)',
+    price: 4500,
+    status: 'Limited',
+    image: 'https://images.unsplash.com/photo-1494412574643-ff11b0a5c1c3?auto=format&fit=crop&w=800&q=80',
+    description: 'Precision climate-controlled unit for temperature-sensitive perishable goods.',
+    specs: { capacity: '28.3 CBM', maxPayload: '27,400 kg', tareWeight: '3,080 kg', dimensions: '20ft x 8ft x 8.5ft' }
+  }
+];
+
+const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
-  // Estado de contenedores (inicializado desde localStorage o datos por defecto)
-  const [containers] = useState(() => {
-    const saved = localStorage.getItem('nextdocker_containers');
-    if (!saved) return initialContainers;
-    // Los datos estáticos (imágenes, textos) siempre vienen de mockData; solo se conservan campos guardados extra.
-    const savedById = Object.fromEntries(JSON.parse(saved).map((c) => [c.id, c]));
-    return initialContainers.map((c) => ({ ...savedById[c.id], ...c }));
-  });
-
-  // Estado de reservas del usuario
-  const [reservations, setReservations] = useState(() => {
-    const saved = localStorage.getItem('nextdocker_reservations');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Carrito: solo se guarda { containerId, origin }; título, imagen y costos salen de `cartCatalog`.
-  const [cart, setCart] = useState(() => {
-    const saved = localStorage.getItem('nextdocker_cart');
-    return saved ? JSON.parse(saved) : initialCart;
-  });
-
-  // Guardar cambios en localStorage
-  useEffect(() => {
-    localStorage.setItem('nextdocker_containers', JSON.stringify(containers));
-  }, [containers]);
+  const [containers] = useState(defaultContainers);
+  const [user, setUser] = useState({ name: 'Sarah Jenkins', email: 's.jenkins@transglobal.com', company: 'Logistics Director' });
+  const [reservations, setReservations] = useState([]);
+  const [favorites, setFavorites] = useState([]);
 
   useEffect(() => {
-    localStorage.setItem('nextdocker_reservations', JSON.stringify(reservations));
-  }, [reservations]);
+    try {
+      const savedUser = localStorage.getItem('nd_user');
+      if (savedUser) setUser(JSON.parse(savedUser));
+      const savedRes = localStorage.getItem('nd_reservations');
+      if (savedRes) setReservations(JSON.parse(savedRes));
+      const savedFav = localStorage.getItem('nd_favorites');
+      if (savedFav) setFavorites(JSON.parse(savedFav));
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem('nextdocker_cart', JSON.stringify(cart));
-  }, [cart]);
-
-  // Acciones del carrito (un contenedor por tipo; si ya está, no se duplica)
-  const addToCart = (containerId, origin) => {
-    const entry = cartCatalog[containerId];
-    if (!entry) return;
-    setCart((prev) => (prev.some((i) => i.containerId === containerId)
-      ? prev
-      : [...prev, { containerId, origin: origin || entry.baseOrigin }]));
+  const addReservation = (item) => {
+    if (!item) return;
+    setReservations((prev) => {
+      const updated = [...prev, { ...item, bookingId: `BK-${Date.now().toString().slice(-6)}` }];
+      localStorage.setItem('nd_reservations', JSON.stringify(updated));
+      return updated;
+    });
   };
-  const removeFromCart = (containerId) => setCart((prev) => prev.filter((i) => i.containerId !== containerId));
-  const setCartOrigin = (containerId, origin) =>
-    setCart((prev) => prev.map((i) => (i.containerId === containerId ? { ...i, origin } : i)));
-  const clearCart = () => setCart([]);
 
-  // Función para reservar equipamiento
-  const reserveContainer = (containerId, originPort = 'Shanghai (CNSHA)') => {
-    const container = containers.find((c) => c.id === containerId);
-    if (!container) return;
+  const cancelReservation = (id) => {
+    setReservations((prev) => {
+      const updated = prev.filter((item) => (item.id || item.bookingId) !== id);
+      localStorage.setItem('nd_reservations', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
-    const newReservation = {
-      id: `RES-${Date.now().toString().slice(-6)}`,
-      containerId: container.id,
-      title: container.title,
-      image: container.image,
-      port: originPort,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      status: 'Confirmed',
-    };
+  const updateUser = (updatedFields) => {
+    setUser((prev) => {
+      const updated = { ...prev, ...updatedFields };
+      localStorage.setItem('nd_user', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
-    setReservations((prev) => [newReservation, ...prev]);
-    return newReservation.id;
+  const toggleFavorite = (item) => {
+    if (!item) return;
+    setFavorites((prev) => {
+      const exists = prev.some((fav) => fav.id === item.id);
+      const updated = exists ? prev.filter((fav) => fav.id !== item.id) : [...prev, item];
+      localStorage.setItem('nd_favorites', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   return (
-    <AppContext.Provider
-      value={{
-        containers,
-        reservations,
-        cart,
-        addToCart,
-        removeFromCart,
-        setCartOrigin,
-        clearCart,
-        reserveContainer,
-      }}
-    >
+    <AppContext.Provider value={{ containers, user, updateUser, reservations, addReservation, cancelReservation, favorites, toggleFavorite }}>
       {children}
     </AppContext.Provider>
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
-export function useApp() {
+export const useApp = () => {
   const context = useContext(AppContext);
   if (!context) {
-    throw new Error('useApp debe usarse dentro de un AppProvider');
+    return {
+      containers: defaultContainers,
+      user: { name: 'Sarah Jenkins', email: 's.jenkins@transglobal.com', company: 'Logistics Director' },
+      reservations: [],
+      favorites: [],
+      addReservation: () => {},
+      cancelReservation: () => {},
+      updateUser: () => {},
+      toggleFavorite: () => {}
+    };
   }
   return context;
-}
+};

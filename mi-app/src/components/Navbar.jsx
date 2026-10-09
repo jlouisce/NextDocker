@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Ship, Heart } from 'lucide-react';
+import { Menu, X, Ship } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function Navbar() {
   const location = useLocation();
-  const { reservations = [], favorites = [] } = useApp();
-  const [open, setOpen] = useState(false);
+  const { reservations = [] } = useApp();
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const links = [
     { to: '/marketplace', label: 'Marketplace' },
@@ -43,32 +43,26 @@ export default function Navbar() {
               {link.label}
             </Link>
           ))}
-
-          {/* Favoritos */}
-          <span className="bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-rose-400 text-[11px] flex items-center gap-1">
-            <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
-            {favorites.length}
-          </span>
         </nav>
 
         {/* BOTÓN MÓVIL */}
         <button
-          onClick={() => setOpen(!open)}
+          onClick={() => setIsMobileOpen(!isMobileOpen)}
           className="md:hidden text-slate-300 hover:text-white p-2"
           aria-label="Toggle Navigation"
         >
-          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          {isMobileOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
         </button>
       </div>
 
-      {/* MENÚ DESPLEGABLE MÓVIL */}
-      {open && (
+      {/* MENÚ MÓVIL */}
+      {isMobileOpen && (
         <nav className="md:hidden bg-slate-900 border-b border-slate-800 px-6 py-4 space-y-3">
           {links.map((link) => (
             <Link
               key={link.to}
               to={link.to}
-              onClick={() => setOpen(false)}
+              onClick={() => setIsMobileOpen(false)}
               className={`block text-xs font-bold uppercase py-1.5 ${
                 isActive(link.to) ? 'text-amber-400' : 'text-slate-300'
               }`}
