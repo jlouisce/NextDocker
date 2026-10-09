@@ -40,64 +40,7 @@ const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const [containers] = useState(defaultContainers);
-<<<<<<< HEAD
-  const [user, setUser] = useState({ name: 'Sarah Jenkins', email: 's.jenkins@transglobal.com', company: 'Logistics Director' });
-  const [reservations, setReservations] = useState([]);
-  const [favorites, setFavorites] = useState([]);
 
-  useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem('nd_user');
-      if (savedUser) setUser(JSON.parse(savedUser));
-      const savedRes = localStorage.getItem('nd_reservations');
-      if (savedRes) setReservations(JSON.parse(savedRes));
-      const savedFav = localStorage.getItem('nd_favorites');
-      if (savedFav) setFavorites(JSON.parse(savedFav));
-    } catch (e) {
-      console.error(e);
-    }
-  }, []);
-
-  const addReservation = (item) => {
-    if (!item) return;
-    setReservations((prev) => {
-      const updated = [...prev, { ...item, bookingId: `BK-${Date.now().toString().slice(-6)}` }];
-      localStorage.setItem('nd_reservations', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const cancelReservation = (id) => {
-    setReservations((prev) => {
-      const updated = prev.filter((item) => (item.id || item.bookingId) !== id);
-      localStorage.setItem('nd_reservations', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const updateUser = (updatedFields) => {
-    setUser((prev) => {
-      const updated = { ...prev, ...updatedFields };
-      localStorage.setItem('nd_user', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  const toggleFavorite = (item) => {
-    if (!item) return;
-    setFavorites((prev) => {
-      const exists = prev.some((fav) => fav.id === item.id);
-      const updated = exists ? prev.filter((fav) => fav.id !== item.id) : [...prev, item];
-      localStorage.setItem('nd_favorites', JSON.stringify(updated));
-      return updated;
-    });
-  };
-
-  return (
-    <AppContext.Provider value={{ containers, user, updateUser, reservations, addReservation, cancelReservation, favorites, toggleFavorite }}>
-=======
-
-  // Usuario nulo por defecto o cargado de localStorage
   const [user, setUser] = useState(() => {
     try {
       const saved = localStorage.getItem('nd_user');
@@ -128,7 +71,6 @@ export function AppProvider({ children }) {
     localStorage.setItem('nd_reservations', JSON.stringify(reservations));
   }, [reservations]);
 
-  // Función para registrar usuarios según su ROL
   const registerUser = (userData) => {
     setUser(userData);
     return userData;
@@ -172,7 +114,6 @@ export function AppProvider({ children }) {
         cancelReservation 
       }}
     >
->>>>>>> avances-juano
       {children}
     </AppContext.Provider>
   );
@@ -183,15 +124,6 @@ export const useApp = () => {
   if (!context) {
     return {
       containers: defaultContainers,
-<<<<<<< HEAD
-      user: { name: 'Sarah Jenkins', email: 's.jenkins@transglobal.com', company: 'Logistics Director' },
-      reservations: [],
-      favorites: [],
-      addReservation: () => {},
-      cancelReservation: () => {},
-      updateUser: () => {},
-      toggleFavorite: () => {}
-=======
       user: null,
       registerUser: () => {},
       logoutUser: () => {},
@@ -199,7 +131,6 @@ export const useApp = () => {
       reservations: [],
       addReservation: () => {},
       cancelReservation: () => {}
->>>>>>> avances-juano
     };
   }
   return context;
