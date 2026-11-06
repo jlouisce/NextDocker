@@ -1,178 +1,230 @@
-import { useRef, useState } from 'react';
-import { Map as MapIcon, MapPin, Package, Route, Search, ShieldCheck, TrendingUp, Zap } from 'lucide-react';
+import { useState } from 'react';
+import { Search, MapPin, Calendar, Filter, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import Footer from '../components/Footer';
 import { useApp } from '../context/AppContext';
-import heroImage from '../assets/figma/hero-container.png';
+import Footer from '../components/Footer';
 
-const bentoCard = 'border border-[#2c2c2c] rounded-[3px] p-8';
+// Factores de ajuste de flete/precio según origen
+const PORT_FACTORS = {
+  shanghai: 1.0,
+  cnsha: 1.0,
+  rotterdam: 1.2,
+  nlrtm: 1.2,
+  'los angeles': 1.15,
+  uslax: 1.15,
+  singapore: 1.25,
+  sgsin: 1.25,
+  hamburg: 1.18,
+  deham: 1.18,
+};
 
 export default function LandingPage() {
-  const { containers } = useApp();
-  const [selectedType, setSelectedType] = useState('ALL');
-  const [searchPort, setSearchPort] = useState('');
-  const catalogRef = useRef(null);
+  const { containers = [], searchParams = {}, updateSearchParams, addToCart } = useApp();
 
-  const filteredContainers = containers.filter((item) => {
-    const matchesType = selectedType === 'ALL' || item.title.toLowerCase().includes(selectedType.toLowerCase());
-    return matchesType;
+  // Estados locales de los campos
+  const [originInput, setOriginInput] = useState(searchParams.origin || 'Shanghai (CNSHA)');
+  const [typeSelect, setTypeSelect] = useState(searchParams.containerType || 'all');
+  const [dateInput, setDateInput] = useState(searchParams.shipDate || new Date().toISOString().split('T')[0]);
+
+  // Filtros aplicados al presionar SEARCH FLEET
+  const [appliedFilters, setAppliedFilters] = useState({
+    origin: searchParams.origin || 'Shanghai (CNSHA)',
+    containerType: searchParams.containerType || 'all',
+    shipDate: searchParams.shipDate || new Date().toISOString().split('T')[0],
   });
 
+  const handleSearch = (e) => {
+    if (e) e.preventDefault();
+    const newFilters = {
+      origin: originInput,
+      containerType: typeSelect,
+      shipDate: dateInput,
+    };
+    setAppliedFilters(newFilters);
+    if (typeof updateSearchParams === 'function') {
+      updateSearchParams(newFilters);
+    }
+  };
+
+  // Filtrado de equipos
+  const filteredContainers = containers.filter((item) => {
+    const filterType = appliedFilters.containerType;
+    if (filterType === 'all') return true;
+
+    const id = (item.id || '').toLowerCase();
+    const title = (item.title || '').toLowerCase();
+
+    if (filterType === '20ft') return id.includes('20') || title.includes('20');
+    if (filterType === '40hc') return id.includes('40') || title.includes('40');
+    if (filterType === 'reefer') return id.includes('reefer') || title.includes('refrigerated');
+
+    return true;
+  });
+
+  // Factor de precio dinámico según puerto
+  const getPortFactor = (originStr) => {
+    const cleanStr = (originStr || '').toLowerCase();
+    for (const [key, factor] of Object.entries(PORT_FACTORS)) {
+      if (cleanStr.includes(key)) return factor;
+    }
+    return 1.1;
+  };
+
+  const currentFactor = getPortFactor(appliedFilters.origin);
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#f3f3f3] text-black font-sans">
-
-      {/* HERO + BUSCADOR */}
-      <section className="relative bg-slate-950 text-[#f9f9f9] py-16 lg:py-[98px] px-6 overflow-hidden">
-        <img src={heroImage} alt="" className="absolute inset-0 size-full object-cover opacity-80" />
-        <div className="absolute inset-0 bg-[rgba(24,24,24,0.8)]" />
-
-        <div className="relative z-10 max-w-[1215px] mx-auto text-center">
-          <h1 className="text-4xl md:text-6xl lg:text-[70px] font-semibold tracking-[-0.05em] leading-tight mb-4">
+    <div className="min-h-screen flex flex-col bg-[#f7fafc] text-[#041627] font-sans">
+      {/* Sección Banner Principal */}
+      <section className="bg-[#041627] text-white pt-14 pb-16 px-6 lg:px-12">
+        <div className="max-w-6xl mx-auto text-center">
+          <h1 className="text-3xl lg:text-5xl font-bold mb-3 tracking-tight">
             Find Containers in Any Port
           </h1>
-          <p className="text-base md:text-[26px] font-medium tracking-[-0.03em] max-w-[910px] mx-auto mb-10">
-            Global procurement simplified. Source, track, and manage industrial-grade shipping containers across our worldwide network with structural precision
+          <p className="text-slate-300 text-sm lg:text-base max-w-2xl mx-auto mb-10">
+            Global procurement simplified. Source, track, and manage industrial-grade shipping containers across our worldwide network.
           </p>
 
-          <div className="bg-[#d9d9d9]/60 p-3 lg:px-[13px] lg:py-[6px] grid grid-cols-1 lg:grid-cols-[1fr_1fr_258px] gap-3 lg:gap-[11px] text-left font-mono text-lg text-black lg:mt-[84px]">
-            <div>
-              <label htmlFor="origin-port" className="block tracking-[-0.01em] mb-1">Origin Port</label>
-              <div className="bg-white/90 h-[67px] flex items-center gap-4 px-[18px]">
-                <MapPin className="size-6 shrink-0" aria-hidden="true" />
-                <input
-                  id="origin-port"
-                  type="text"
-                  value={searchPort}
-                  onChange={(e) => setSearchPort(e.target.value)}
-                  placeholder="e.g. Shanghai, Rotterdam, Los Angeles"
-                  className="w-full bg-transparent focus:outline-none tracking-[-0.04em] placeholder:text-black/80 text-base lg:text-lg"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="container-type" className="block tracking-[-0.01em] mb-1">Container type</label>
-              <div className="bg-[#f1f4f6]/90 h-[67px] flex items-center gap-4 px-[11px]">
-                <Package className="size-6 shrink-0" aria-hidden="true" />
-                <select
-                  id="container-type"
-                  value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value)}
-                  className="w-full bg-transparent focus:outline-none tracking-[-0.04em] cursor-pointer"
-                >
-                  <option value="ALL">All Types</option>
-                  <option value="20ft">20ft Standard</option>
-                  <option value="40ft">40ft High Cube</option>
-                  <option value="Refrigerated">Refrigerated (Reefer)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="flex lg:items-end">
-              <button
-                type="button"
-                onClick={() => catalogRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                className="w-full h-[67px] bg-brand-orange/90 hover:bg-brand-orange flex items-center justify-center gap-4 text-[15px] tracking-[0.09em] transition-colors"
-              >
-                <Search className="size-6" aria-hidden="true" />
-                Search Fleet
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CATÁLOGO DINÁMICO */}
-      <section ref={catalogRef} className="bg-white py-16 lg:py-[66px] px-6 lg:px-[59px]">
-        <div className="text-center mb-12 lg:mb-[90px]">
-          <h2 className="text-2xl lg:text-[30px] tracking-[0.06em]">Available Equipment</h2>
-          <p className="font-roboto font-light text-base lg:text-xl tracking-[0.08em] mt-2">
-            Ready for immediate deployment across key global hubs.
-          </p>
-        </div>
-
-        <div className="max-w-[1633px] mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 lg:gap-[40px]">
-          {filteredContainers.map((item) => (
-            <article key={item.id} className="bg-[#f9f9f9] flex flex-col pb-[25px]">
-              <div className="relative h-[265px] bg-slate-200 overflow-hidden">
-                <img src={item.image} alt={item.title} className="size-full object-cover" />
-                <span className="absolute top-[5px] right-[10px] bg-[#f7fafc] rounded-lg h-[34px] px-3 flex items-center gap-2 font-mono text-base tracking-[-0.04em]">
-                  <span className={`size-3 rounded-full ${item.statusColor === 'emerald' ? 'bg-[#22c55e]' : 'bg-[#1d4ed8]'}`} />
-                  {item.status}
-                </span>
-              </div>
-
-              <div className="px-[21px] pt-[7px] flex-1 flex flex-col">
-                <h3 className="text-[28px] lg:text-[32px] leading-[47px]">{item.title}</h3>
-                <p className="text-lg lg:text-[21px] font-light min-h-[94px] pr-2">{item.description}</p>
-                <div className="font-mono text-base lg:text-xl flex justify-between gap-4 mt-auto mb-[35px] px-[10px]">
-                  <span>{item.capLabel || 'Cap'}: {item.cap}</span>
-                  <span>{item.maxLabel || 'Max'}: {item.maxWeight}</span>
+          {/* Tarjeta de Búsqueda Estilo Figma */}
+          <div className="bg-white text-slate-900 border border-slate-200/80 rounded-lg p-6 shadow-xl text-left">
+            <form
+              onSubmit={handleSearch}
+              className="grid grid-cols-1 md:grid-cols-4 gap-5 items-end"
+            >
+              {/* 1. Origin Port */}
+              <div className="flex flex-col">
+                <label className="text-[11px] font-mono font-semibold tracking-wider text-slate-500 uppercase mb-2">
+                  Origin Port
+                </label>
+                <div className="relative w-full">
+                  <MapPin className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
+                  <input
+                    type="text"
+                    value={originInput}
+                    onChange={(e) => setOriginInput(e.target.value)}
+                    placeholder="e.g. Shanghai (CNSHA)"
+                    className="w-full h-12 bg-[#f8fafc] border border-slate-300 rounded-[4px] pl-10 pr-3.5 text-sm font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white transition"
+                  />
                 </div>
-                <Link
-                  to={`/containers/${item.id}`}
-                  className="h-[41px] w-full flex items-center justify-center bg-[#fcfcfc] border border-[#262626] text-[#222] font-mono text-lg hover:bg-[#262626] hover:text-white transition-colors"
-                >
-                  View Inventory
-                </Link>
               </div>
-            </article>
-          ))}
-        </div>
-      </section>
 
-      {/* BENTO GRID */}
-      <section className="px-6 lg:px-[55px] py-16 lg:py-[67px] mb-8 lg:mb-[128px]">
-        <div className="text-center mb-12 lg:mb-[90px]">
-          <h2 className="text-2xl lg:text-[30px] tracking-[0.06em]">Smart Logistics Optimization</h2>
-          <p className="font-roboto font-light text-base lg:text-xl tracking-[0.08em] mt-2">
-            Data-driven procurement for the modern supply chain.
-          </p>
-        </div>
+              {/* 2. Container Type */}
+              <div className="flex flex-col">
+                <label className="text-[11px] font-mono font-semibold tracking-wider text-slate-500 uppercase mb-2">
+                  Equipment Type
+                </label>
+                <div className="relative w-full">
+                  <Filter className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
+                  <select
+                    value={typeSelect}
+                    onChange={(e) => setTypeSelect(e.target.value)}
+                    className="appearance-none w-full h-12 bg-[#f8fafc] border border-slate-300 rounded-[4px] pl-10 pr-10 text-sm font-medium text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white cursor-pointer transition"
+                  >
+                    <option value="all">All Equipment Types</option>
+                    <option value="20ft">20' Standard (SD)</option>
+                    <option value="40hc">40' High Cube (HC)</option>
+                    <option value="reefer">40' Refrigerated (Reefer)</option>
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                </div>
+              </div>
 
-        <div className="max-w-[1622px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-[14px]">
-          <div className={`${bentoCard} relative overflow-hidden min-h-[420px] lg:min-h-[659px] lg:pl-[42px]`}>
-            <Route className="size-10 mt-[10px]" aria-hidden="true" />
-            <h3 className="text-xl lg:text-[25px] font-light tracking-[0.06em] mt-[33px]">Dynamic Routing &amp; Sourcing</h3>
-            <p className="font-roboto font-light text-lg lg:text-xl tracking-[0.01em] leading-[1.114] max-w-[425px] mt-3">
-              Our algorithm identifies the most cost-effective container positioning based on real time-port congestion and freight lane demands.
-            </p>
-            <MapIcon className="absolute right-4 bottom-8 size-[246px] text-black/10 hidden lg:block" strokeWidth={1} aria-hidden="true" />
-          </div>
+              {/* 3. Shipment Date */}
+              <div className="flex flex-col">
+                <label className="text-[11px] font-mono font-semibold tracking-wider text-slate-500 uppercase mb-2">
+                  Shipment Date
+                </label>
+                <div className="relative w-full">
+                  <Calendar className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
+                  <input
+                    type="date"
+                    value={dateInput}
+                    onChange={(e) => setDateInput(e.target.value)}
+                    className="w-full h-12 bg-[#f8fafc] border border-slate-300 rounded-[4px] pl-10 pr-3.5 text-sm font-mono text-slate-900 focus:outline-none focus:border-amber-500 focus:bg-white transition"
+                  />
+                </div>
+              </div>
 
-          <div className="flex flex-col gap-[14px]">
-            <div className={`${bentoCard} bg-navy-800 text-white min-h-[200px] lg:min-h-[322px] flex items-start gap-6 lg:pl-[18px] pt-[40px]`}>
-              <ShieldCheck className="size-14 lg:size-[72px] shrink-0" strokeWidth={1.5} aria-hidden="true" />
+              {/* 4. Botón Search Fleet */}
               <div>
-                <h3 className="text-xl lg:text-[28px] font-semibold">Grade-A Certification</h3>
-                <p className="font-roboto font-light text-base lg:text-xl text-[#fafafa] tracking-[0.01em] mt-3">
-                  Every unit undergoes strict structural integrity testing before listing.
-                </p>
+                <button
+                  type="submit"
+                  className="w-full h-12 bg-[#f5a623] hover:bg-[#e0951a] active:scale-[0.99] text-[#041627] font-mono font-bold text-xs uppercase tracking-wider rounded-[4px] flex items-center justify-center gap-2 transition shadow-sm"
+                >
+                  <Search className="w-4 h-4 text-[#041627]" />
+                  <span>SEARCH FLEET</span>
+                </button>
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-[14px]">
-              <div className={`${bentoCard} min-h-[322px] flex flex-col lg:px-[22px]`}>
-                <Zap className="size-10" aria-hidden="true" />
-                <h3 className="text-xl lg:text-[25px] font-light tracking-[0.06em] mt-4">Instant Booking</h3>
-                <p className="font-roboto font-light text-lg lg:text-xl tracking-[0.01em] leading-[1.114] mt-auto max-w-[273px]">
-                  Bypass brokers. Secure assets instantly via secure API.
-                </p>
-              </div>
-              <div className={`${bentoCard} min-h-[322px] flex flex-col lg:px-[18px]`}>
-                <TrendingUp className="size-10" aria-hidden="true" />
-                <h3 className="text-xl lg:text-[25px] font-light tracking-[0.06em] mt-3">Market Rates</h3>
-                <p className="font-roboto font-light text-lg lg:text-xl tracking-[0.01em] leading-[1.114] mt-auto max-w-[357px]">
-                  Transparent pricing historically pegged to global shipping indices.
-                </p>
-              </div>
-            </div>
+            </form>
           </div>
         </div>
       </section>
+
+      {/* Catálogo de Equipos */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-10">
+        <div className="flex justify-between items-center border-b border-slate-200 pb-4 mb-6">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900">Available Equipment</h2>
+            <p className="text-xs font-mono text-slate-500 mt-1">
+              Location: <span className="font-bold text-amber-600">{appliedFilters.origin}</span> | Date: <span className="font-bold text-slate-700">{appliedFilters.shipDate}</span>
+            </p>
+          </div>
+          <span className="text-sm font-mono text-slate-500 font-medium">
+            {filteredContainers.length} Models Available
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {filteredContainers.map((item) => {
+            const basePrice = item.price || item.unitCost || 2100;
+            const calculatedPrice = Math.round(basePrice * currentFactor);
+
+            return (
+              <article
+                key={item.id}
+                className="bg-white border border-slate-200 rounded-lg overflow-hidden shadow-sm flex flex-col justify-between hover:shadow-md transition"
+              >
+                <div>
+                  <div className="h-48 bg-slate-100 relative overflow-hidden">
+                    <img src={item.image} alt={item.title} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="p-5">
+                    <h3 className="font-bold text-lg text-slate-900 mb-1">{item.title}</h3>
+                    <p className="text-slate-600 text-sm leading-relaxed mb-4">{item.description}</p>
+                    <div className="flex items-baseline justify-between">
+                      <div className="font-mono font-bold text-2xl text-amber-600">
+                        ${calculatedPrice.toLocaleString()} <span className="text-xs text-slate-500">USD</span>
+                      </div>
+                      {currentFactor !== 1 && (
+                        <span className="text-[10px] font-mono bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-200">
+                          Port Adjusted
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-slate-50 border-t border-slate-200 flex gap-2">
+                  <Link
+                    to={`/containers/${item.id}`}
+                    className="flex-1 text-center bg-slate-900 hover:bg-slate-800 text-white text-xs font-mono font-bold py-2.5 rounded transition flex items-center justify-center"
+                  >
+                    VIEW DETAILS
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => addToCart(item.id, appliedFilters.origin, appliedFilters.shipDate)}
+                    className="bg-[#f5a623] hover:bg-[#e0951a] text-slate-900 text-xs font-mono font-bold px-4 py-2.5 rounded transition"
+                  >
+                    ADD TO CART
+                  </button>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </main>
 
       <Footer />
-
     </div>
   );
 }

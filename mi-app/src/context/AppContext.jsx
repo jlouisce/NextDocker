@@ -1,86 +1,113 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { containersData as initialContainers, initialCart, cartCatalog } from '../data/mockData';
+import { containersData } from '../data/mockData';
 
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
-  // Estado de contenedores (inicializado desde localStorage o datos por defecto)
-  const [containers] = useState(() => {
-    const saved = localStorage.getItem('nextdocker_containers');
-    if (!saved) return initialContainers;
-    // Los datos estáticos (imágenes, textos) siempre vienen de mockData; solo se conservan campos guardados extra.
-    const savedById = Object.fromEntries(JSON.parse(saved).map((c) => [c.id, c]));
-    return initialContainers.map((c) => ({ ...savedById[c.id], ...c }));
+  const [containers] = useState(containersData);
+
+  const [searchParams, setSearchParams] = useState({
+    origin: 'Shanghai (CNSHA)',
+    containerType: 'all',
+    shipDate: new Date().toISOString().split('T')[0],
   });
 
-  // Estado de reservas del usuario
-  const [reservations, setReservations] = useState(() => {
-    const saved = localStorage.getItem('nextdocker_reservations');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const updateSearchParams = (params) => {
+    setSearchParams((prev) => ({ ...prev, ...params }));
+  };
 
-  // Carrito: solo se guarda { containerId, origin }; título, imagen y costos salen de `cartCatalog`.
   const [cart, setCart] = useState(() => {
-    const saved = localStorage.getItem('nextdocker_cart');
-    return saved ? JSON.parse(saved) : initialCart;
+    try {
+      const savedCart = localStorage.getItem('nextdocker_cart');
+      if (!savedCart) return [];
+      const parsed = JSON.parse(savedCart);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
   });
 
-  // Guardar cambios en localStorage
-  useEffect(() => {
-    localStorage.setItem('nextdocker_containers', JSON.stringify(containers));
-  }, [containers]);
+  const [reservations, setReservations] = useState(() => {
+    try {
+      const savedReservations = localStorage.getItem('nextdocker_reservations');
+      if (!savedReservations) return [];
+      const parsed = JSON.parse(savedReservations);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      return [];
+    }
+  });
 
   useEffect(() => {
-    localStorage.setItem('nextdocker_reservations', JSON.stringify(reservations));
-  }, [reservations]);
-
-  useEffect(() => {
-    localStorage.setItem('nextdocker_cart', JSON.stringify(cart));
+    try {
+      localStorage.setItem('nextdocker_cart', JSON.stringify(cart));
+    } catch (e) {
+      console.error(e);
+    }
   }, [cart]);
 
-  // Acciones del carrito (un contenedor por tipo; si ya está, no se duplica)
-  const addToCart = (containerId, origin) => {
-    const entry = cartCatalog[containerId];
-    if (!entry) return;
-    setCart((prev) => (prev.some((i) => i.containerId === containerId)
-      ? prev
-      : [...prev, { containerId, origin: origin || entry.baseOrigin }]));
-  };
-  const removeFromCart = (containerId) => setCart((prev) => prev.filter((i) => i.containerId !== containerId));
-  const setCartOrigin = (containerId, origin) =>
-    setCart((prev) => prev.map((i) => (i.containerId === containerId ? { ...i, origin } : i)));
-  const clearCart = () => setCart([]);
+  useEffect(() => {
+    try {
+      localStorage.setItem('nextdocker_reservations', JSON.stringify(reservations));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [reservations]);
 
-  // Función para reservar equipamiento
-  const reserveContainer = (containerId, originPort = 'Shanghai (CNSHA)') => {
-    const container = containers.find((c) => c.id === containerId);
-    if (!container) return;
-
-    const newReservation = {
-      id: `RES-${Date.now().toString().slice(-6)}`,
-      containerId: container.id,
-      title: container.title,
-      image: container.image,
-      port: originPort,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      status: 'Confirmed',
+  const addToCart = (containerId, customOrigin, customShipDate) => {
+    const newItem = {
+      cartItemId: `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      containerId: containerId || '20ft-standard',
+      origin: customOrigin || searchParams.origin || 'Shanghai (CNSHA)',
+      shipDate: customShipDate || searchParams.shipDate || new Date().toISOString().split('T')[0],
     };
+    setCart((prevCart) => [...(prevCart || []), newItem]);
+  };
 
-    setReservations((prev) => [newReservation, ...prev]);
-    return newReservation.id;
+  const removeFromCart = (targetId) => {
+    setCart((prevCart) =>
+      (prevCart || []).filter(
+        (item, idx) =>
+          item.cartItemId !== targetId &&
+          item.containerId !== targetId &&
+          item.id !== targetId &&
+          idx !== targetId
+      )
+    );
+  };
+
+  const setCartOrigin = (targetId, origin) => {
+    setCart((prevCart) =>
+      (prevCart || []).map((item) => {
+        if (item.cartItemId === targetId || item.containerId === targetId) {
+          return { ...item, origin };
+        }
+        return item;
+      })
+    );
+  };
+
+  const clearCart = () => {
+    setCart([]);
+    try {
+      localStorage.removeItem('nextdocker_cart');
+    } catch (e) {}
   };
 
   return (
     <AppContext.Provider
       value={{
         containers,
-        reservations,
         cart,
+        setCart,
         addToCart,
         removeFromCart,
         setCartOrigin,
         clearCart,
-        reserveContainer,
+        reservations,
+        setReservations,
+        searchParams,
+        updateSearchParams,
       }}
     >
       {children}
@@ -88,11 +115,10 @@ export function AppProvider({ children }) {
   );
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
 export function useApp() {
   const context = useContext(AppContext);
   if (!context) {
-    throw new Error('useApp debe usarse dentro de un AppProvider');
+    throw new Error('useApp debe ser utilizado dentro de un AppProvider');
   }
   return context;
 }

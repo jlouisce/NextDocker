@@ -1,102 +1,167 @@
+import { Link } from 'react-router-dom';
+import { Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { cartCatalog, containersData } from '../data/mockData';
+import Footer from '../components/Footer';
+
+const money = (val) => `$${(val || 0).toLocaleString('en-US')} USD`;
 
 export default function Profile() {
-  const context = useApp() || {};
-  const currentCart = context.cart || [];
-  const orderHistory = context.reservations || [];
+  const { cart = [], reservations = [], removeFromCart, clearCart } = useApp() || {};
 
-  const getDetails = (item) => {
-    // Buscar ID en todas las formas posibles
-    const id = item.containerId || item.id || item.sku || item.productId;
-    
-    // Extraer detalles de cualquiera de los dos catálogos
-    const detailsFromCatalog = cartCatalog[id] || (Array.isArray(cartCatalog) && cartCatalog.find(c => c.id === id)) || {};
-    const detailsFromData = (Array.isArray(containersData) && containersData.find(c => c.id === id)) || {};
-    
-    const details = { ...detailsFromData, ...detailsFromCatalog };
+  // Formateador de origen robusto sin fallback a Shanghai si existe un string válido
+  const getOriginLabel = (item) => {
+    if (!item) return 'Origen no especificado';
 
-    // Cazador de propiedades: busca el precio y el nombre en todas las variaciones comunes
-    const realPrice = details.price || details.unitCost || details.unit_cost || details.cost || item.price || item.unitCost || 0;
-    const realName = details.name || details.title || details.type || details.model || item.name || item.title || 'Contenedor Estándar';
+    const rawOrigin = item.origin || item.selectedOrigin;
+    if (typeof rawOrigin === 'string' && rawOrigin.trim() !== '') {
+      return rawOrigin;
+    }
 
+    if (typeof rawOrigin === 'object' && rawOrigin !== null) {
+      return rawOrigin.port ? `${rawOrigin.port} (${rawOrigin.code || ''})` : (rawOrigin.code || 'Origen no especificado');
+    }
+
+    return 'Origen no especificado';
+  };
+
+  const getItemDetails = (item) => {
+    const id = item.containerId || item.id;
+    const cat = cartCatalog[id] || containersData?.find((c) => c.id === id) || {};
     return {
-      ...item,
-      id: id,
-      name: realName,
-      price: realPrice,
-      origin: item.origin || details.origin || 'No especificado',
-      rawItemData: item, // Guardamos los datos crudos para depuración
-      rawCatalogDetails: details
+      title: item.title || cat.title || 'Contenedor Estándar',
+      price: item.unitCost || cat.unitCost || item.price || cat.price || 2100,
+      origin: getOriginLabel(item),
     };
   };
 
-  const cartItems = currentCart.map(getDetails);
-  const historyItems = orderHistory.map(getDetails);
-  const totalCart = cartItems.reduce((acc, curr) => acc + curr.price, 0);
-
-  const renderItem = (res, index, isHistory) => (
-    <div key={index} className={`p-4 border rounded-lg ${isHistory ? 'border-emerald-200 bg-emerald-50' : 'border-blue-200 bg-blue-50'}`}>
-      <h3 className="font-semibold text-lg">{res.name}</h3>
-      <p className="text-sm text-slate-500 mb-2">Origen: {res.origin}</p>
-      <p className={`font-bold text-lg ${isHistory ? 'text-emerald-600' : 'text-blue-600'}`}>
-        ${res.price.toLocaleString()} USD
-      </p>
-      {isHistory && (
-        <span className="inline-block mt-2 px-2 py-1 bg-emerald-200 text-emerald-800 text-xs font-bold rounded">
-          ORDEN PROCESADA
-        </span>
-      )}
-      
-      {/* MODO DEPURACIÓN: Si el precio sigue siendo 0, mostramos qué hay realmente dentro */}
-      {res.price === 0 && (
-        <div className="mt-4 p-3 bg-red-100 border border-red-300 rounded text-xs overflow-auto text-slate-700">
-          <p className="font-bold text-red-600 mb-1">⚠️ Depuración de Datos (Falta Precio/Nombre):</p>
-          <p className="font-semibold">Datos guardados en el carrito:</p>
-          <pre>{JSON.stringify(res.rawItemData, null, 2)}</pre>
-          <p className="font-semibold mt-2">Detalles encontrados en el catálogo:</p>
-          <pre>{JSON.stringify(res.rawCatalogDetails, null, 2)}</pre>
-        </div>
-      )}
-    </div>
-  );
+  // Invertir el historial para mostrar las órdenes más recientes primero
+  const reversedReservations = [...reservations].reverse();
 
   return (
-    <div className="max-w-5xl mx-auto p-6 mt-10 bg-white rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-2">Mi Perfil y Panel de Usuario</h1>
-      <p className="text-slate-600 mb-8">
-        Usuario activo: <span className="font-semibold">{context.user?.name || 'Invitado'}</span>
-      </p>
-
-      <div className="grid md:grid-cols-2 gap-8">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800 mb-4 border-b pb-2">Carrito en Curso</h2>
-          <div className="space-y-4">
-            {cartItems.length === 0 ? (
-              <p className="text-slate-500 italic">No tienes contenedores en el carrito logístico.</p>
-            ) : (
-              cartItems.map((res, index) => renderItem(res, index, false))
-            )}
+    <div className="min-h-screen flex flex-col bg-[#f7fafc] text-[#041627] font-sans">
+      <main className="flex-1 w-full max-w-[1200px] mx-auto px-6 py-8">
+        
+        {/* Cabecera del Panel */}
+        <div className="border-b border-[#c4c6cd] pb-4 mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+          <div>
+            <h1 className="text-3xl font-bold">Mi Perfil y Panel de Usuario</h1>
+            <p className="text-slate-600 mt-1">
+              Usuario activo: <span className="font-semibold text-slate-800">Invitado</span>
+            </p>
           </div>
-          {cartItems.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-slate-200 flex justify-between">
-              <p className="text-slate-600 font-semibold">Total pendiente:</p>
-              <p className="text-xl font-bold text-blue-600">${totalCart.toLocaleString()} USD</p>
-            </div>
+          {cart.length > 0 && (
+            <button
+              type="button"
+              onClick={() => clearCart()}
+              className="text-xs font-mono text-red-600 hover:underline border border-red-200 bg-red-50 px-3 py-1.5 rounded"
+            >
+              PURGAR CARRITO COMPLETAMENTE
+            </button>
           )}
         </div>
 
-        <div>
-          <h2 className="text-xl font-bold text-slate-800 mb-4 border-b pb-2">Historial de Órdenes</h2>
-          <div className="space-y-4">
-            {historyItems.length === 0 ? (
-              <p className="text-slate-500 italic">Aún no has procesado ninguna orden en el checkout.</p>
+        {/* Grid Principal */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+          
+          {/* Carrito en Curso */}
+          <section className="flex flex-col gap-4">
+            <div className="flex justify-between items-center border-b border-slate-200 pb-2">
+              <h2 className="text-xl font-bold text-slate-800">
+                Carrito en Curso ({cart.length})
+              </h2>
+              {cart.length > 0 && (
+                <Link 
+                  to="/logistics" 
+                  className="bg-amber-500 hover:bg-amber-600 text-slate-900 text-xs font-bold font-mono px-3 py-1.5 rounded transition"
+                >
+                  PROCEDER AL CHECKOUT &rarr;
+                </Link>
+              )}
+            </div>
+            
+            {cart.length === 0 ? (
+              <p className="text-slate-500 italic py-4">No tienes contenedores en el carrito logístico.</p>
             ) : (
-              historyItems.map((res, index) => renderItem(res, index, true))
+              <div className="flex flex-col gap-3">
+                {cart.map((item, idx) => {
+                  const details = getItemDetails(item);
+                  const itemId = item.cartItemId || item.containerId || item.id || idx;
+
+                  return (
+                    <div key={idx} className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm flex justify-between items-center">
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-lg">{details.title}</h3>
+                        <p className="text-sm text-slate-600 mt-0.5">Origen: <strong className="font-semibold">{details.origin}</strong></p>
+                        <p className="text-amber-600 font-bold font-mono text-base mt-1">{money(details.price)}</p>
+                      </div>
+
+                      {/* Eliminación manual de elementos de la lista */}
+                      <button
+                        type="button"
+                        onClick={() => removeFromCart(itemId)}
+                        title="Eliminar del carrito"
+                        className="p-2 text-slate-400 hover:text-red-600 transition"
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                  );
+                })}
+
+                <Link 
+                  to="/logistics" 
+                  className="w-full text-center bg-slate-900 hover:bg-slate-800 text-white font-mono font-bold text-sm py-3 rounded transition mt-2"
+                >
+                  IR A SMART CART PARA REVISAR Y PAGAR
+                </Link>
+              </div>
             )}
-          </div>
+          </section>
+
+          {/* Historial de Órdenes (Recientes Primero) */}
+          <section className="flex flex-col gap-4">
+            <h2 className="text-xl font-bold text-slate-800 border-b border-slate-200 pb-2">
+              Historial de Órdenes ({reservations.length})
+            </h2>
+
+            {reservations.length === 0 ? (
+              <p className="text-slate-500 italic py-4">No hay órdenes procesadas anteriormente.</p>
+            ) : (
+              <div className="flex flex-col gap-3 max-h-[600px] overflow-y-auto pr-1">
+                {reversedReservations.map((item, idx) => {
+                  const details = getItemDetails(item);
+                  return (
+                    <div 
+                      key={idx} 
+                      className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-lg p-4 shadow-sm flex flex-col gap-2"
+                    >
+                      <div className="flex justify-between items-start">
+                        <h3 className="font-bold text-[#166534] text-lg">{details.title}</h3>
+                        {item.orderRef && (
+                          <span className="text-xs font-mono font-bold text-[#15803d] bg-white px-2 py-0.5 rounded border border-[#86efac]">
+                            {item.orderRef}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-[#15803d]">Origen: <strong className="font-semibold">{details.origin}</strong></p>
+                      <p className="text-[#166534] font-bold font-mono text-base">{money(details.price)}</p>
+                      <div className="mt-1">
+                        <span className="inline-block text-[10px] font-mono font-bold uppercase bg-[#dcfce7] text-[#15803d] px-2 py-1 rounded border border-[#86efac]">
+                          ORDEN PROCESADA
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
         </div>
-      </div>
+      </main>
+
+      <Footer />
     </div>
   );
 }
