@@ -4,7 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import Footer from '../../components/Footer';
 import { useApp } from '../../context/AppContext';
 import { equipmentOptions, lanesData } from '../../data/mockData';
-import heroOverlay from '../../assets/figma/dash-hero-overlay.jpg';
+//import heroOverlay from '../../assets/figma/dash-hero-overlay.jpg';
+const heroOverlay = "/assets/figma/dash-hero-overlay.jpg";
 
 const carrierIcons = { oceania: Waves, pacific: Ship, express: Zap };
 const money = (value) => `$${value.toLocaleString('en-US')}`;

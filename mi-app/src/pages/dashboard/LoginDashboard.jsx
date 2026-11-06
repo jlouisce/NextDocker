@@ -1,6 +1,6 @@
 import { Container, Lock, Mail } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import authBg from '../../assets/figma/auth-bg.jpg';
+const authBg = "/assets/figma/auth-bg.jpg";
 
 const label = 'font-mono font-bold text-xs tracking-[0.05em] uppercase';
 const input =

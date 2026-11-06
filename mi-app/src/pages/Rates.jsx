@@ -1,200 +1,248 @@
 import { useState } from 'react';
-import { Search, Info } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Search, ChevronDown, Route, Clock, Calendar } from 'lucide-react';
+import Footer from '../components/Footer';
+import RateBreakdown from '../components/RateBreakdown';
 import { useApp } from '../context/AppContext';
-
-const GLOBAL_PORTS = [
-  { code: 'CNSHA', name: 'Shanghai (CNSHA)', country: 'China' },
-  { code: 'USLAX', name: 'Los Angeles (USLAX)', country: 'EE. UU.' },
-  { code: 'NLRTM', name: 'Rotterdam (NLRTM)', country: 'Países Bajos' },
-  { code: 'SGSIN', name: 'Singapore (SGSIN)', country: 'Singapur' },
-  { code: 'DEHAM', name: 'Hamburg (DEHAM)', country: 'Alemania' },
-  { code: 'CNNGB', name: 'Ningbo-Zhoushan (CNNGB)', country: 'China' },
-  { code: 'KRPUS', name: 'Busan (KRPUS)', country: 'Corea del Sur' },
-];
-
-const EQUIPMENT_TYPES = [
-  { id: '20ft', name: "20' Standard (SD)", multiplier: 0.75, containerId: '20ft-standard' },
-  { id: '40hc', name: "40' High Cube (HC)", multiplier: 1.0, containerId: '40ft-hc' },
-  { id: 'reefer', name: "40' Refrigerated (Reefer)", multiplier: 1.45, containerId: 'reefer' },
-];
-
-const BASE_CARRIERS = [
-  { id: 'oceania', name: 'Oceania Line', status: 'AVAILABLE', transit: '18-21 Days', frequency: 'Weekly (Mon)', basePrice: 3250 },
-  { id: 'pacific', name: 'Pacific Freight', status: 'AVAILABLE', transit: '20-24 Days', frequency: 'Bi-Weekly', basePrice: 3100 },
-  { id: 'express', name: 'Express Logistics', status: 'LIMITED SPACE', tag: 'FASTEST', transit: '14-16 Days', frequency: 'Weekly (Fri)', basePrice: 4250 },
-];
+import { lanesData } from '../data/mockData';
 
 export default function Rates() {
-  const navigate = useNavigate();
-  const { addToCart, searchParams } = useApp() || {};
+  const { origin, setOrigin, shipDate, setShipDate, addToCart } = useApp();
 
-  const [origin, setOrigin] = useState(searchParams?.origin || 'Shanghai (CNSHA)');
-  const [destination, setDestination] = useState('Los Angeles (USLAX)');
-  const [equipmentId, setEquipmentId] = useState('40hc');
+  // Estados de entrada del formulario
+  const [searchOrigin, setSearchOrigin] = useState(origin || 'Shanghai (CNSHA)');
+  const [searchEquipment, setSearchEquipment] = useState('40ft High Cube');
+  const [searchDate, setSearchDate] = useState(shipDate || '2026-11-26');
 
-  const [activeSearch, setActiveSearch] = useState({
-    origin: searchParams?.origin || 'Shanghai (CNSHA)',
-    destination: 'Los Angeles (USLAX)',
-    equipmentId: '40hc',
+  // Estado que actualiza los resultados en pantalla tras hacer clic en SEARCH RATES
+  const [appliedFilters, setAppliedFilters] = useState({
+    origin: origin || 'Shanghai (CNSHA)',
+    equipment: '40ft High Cube',
+    date: shipDate || '2026-11-26',
   });
 
+  const [selectedLane, setSelectedLane] = useState(null);
+
+  // Ejecución de la búsqueda al hacer clic o submit
   const handleSearch = (e) => {
     if (e) e.preventDefault();
-    setActiveSearch({ origin, destination, equipmentId });
+    setOrigin(searchOrigin);
+    setShipDate(searchDate);
+    setAppliedFilters({
+      origin: searchOrigin,
+      equipment: searchEquipment,
+      date: searchDate,
+    });
   };
 
-  const selectedEquipment = EQUIPMENT_TYPES.find((e) => e.id === activeSearch.equipmentId) || EQUIPMENT_TYPES[1];
+  const getContainerId = (equip) => {
+    if (equip.includes('20ft')) return '20ft-standard';
+    if (equip.includes('Reefer') || equip.includes('Refrigerated')) return 'reefer';
+    return '40ft-hc';
+  };
 
-  const calculatedRates = BASE_CARRIERS.map((carrier) => {
-    const isSamePort = activeSearch.origin === activeSearch.destination;
-    const routeFactor = isSamePort ? 0.3 : 1.0;
-    const finalPrice = Math.round(carrier.basePrice * selectedEquipment.multiplier * routeFactor);
-    return {
-      ...carrier,
-      totalRate: finalPrice,
-    };
+  const getRateMultiplier = (equip) => {
+    if (equip.includes('20ft')) return 0.75;
+    if (equip.includes('Reefer') || equip.includes('Refrigerated')) return 1.4;
+    return 1.0;
+  };
+
+  const mult = getRateMultiplier(appliedFilters.equipment);
+
+  // Extrae el código de 5 letras entre paréntesis (ej: "CNSHA", "NLRTM", "USLAX")
+  const extractCode = (str) => {
+    const match = str.match(/\(([A-Z]+)\)/);
+    return match ? match[1] : str;
+  };
+
+  const filterCode = extractCode(appliedFilters.origin);
+
+  // Filtrado flexible por nombre de puerto o código de ruta
+  const filteredLanes = lanesData.filter((lane) => {
+    if (!appliedFilters.origin) return true;
+    return (
+      lane.origin.toLowerCase().includes(appliedFilters.origin.toLowerCase()) ||
+      lane.code.includes(filterCode)
+    );
   });
 
-  // Envío persistente del puerto ingresado al carrito
-  const handleBookNow = (carrier) => {
-    const targetOrigin = activeSearch.origin || origin || 'Shanghai (CNSHA)';
-    if (typeof addToCart === 'function') {
-      addToCart(selectedEquipment.containerId, targetOrigin);
-    }
-    navigate('/logistics');
-  };
-
-  const availableRates = rateQuotes.map((rate) => ({
-  ...rate,
-  origin: 'Shanghai (CNSHA)',
-  destination: 'Los Angeles (USLAX)',
-  equipment: "40' High Cube (HC)",
-}));
-
-const normalize = (value) =>
-  value.trim().toLowerCase();
-
-const filteredRates = availableRates.filter((rate) =>
-  normalize(rate.origin) === normalize(searchFilters.origin) &&
-  normalize(rate.destination) === normalize(searchFilters.destination) &&
-  rate.equipment === searchFilters.equipment
-);
-
-
-
   return (
-    <div className="min-h-screen bg-[#f7fafc] text-[#041627] font-sans pb-16">
-      <section className="bg-[#041627] text-white px-6 lg:px-12 py-12 shadow-md">
-        <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl lg:text-4xl font-bold tracking-tight mb-2">Global Freight Rates</h1>
-          <p className="text-slate-300 text-sm sm:text-base mb-8">
-            Instant access to real-time shipping lanes, structural pricing, and capacity guarantees.
-          </p>
+    <div className="min-h-screen flex flex-col bg-[#f7fafc] text-[#041627] font-sans">
+      <main className="flex-1 w-full max-w-[1728px] mx-auto px-6 lg:px-[54px] py-8 flex flex-col gap-8">
+        
+        {/* Header & Search Form */}
+        <section className="bg-[#041627] text-white p-6 lg:p-8 rounded-[5px] flex flex-col gap-6">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-bold">Freight Rates & Routes</h1>
+            <p className="text-gray-300 text-sm mt-1">
+              Compare ocean freight rates and schedules across major shipping corridors.
+            </p>
+          </div>
 
-          <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-white/10 p-4 rounded-lg border border-slate-700 backdrop-blur-sm">
-            <div>
-              <label className="block text-xs font-mono text-slate-300 uppercase mb-1">Origin Port</label>
-              <input
-                type="text"
-                value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
-                placeholder="e.g. Shanghai, Cali, Rotterdam"
-                className="w-full bg-[#0b1d2d] border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-mono text-slate-300 uppercase mb-1">Destination Port</label>
-              <input
-                type="text"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="e.g. Los Angeles (USLAX)"
-                className="w-full bg-[#0b1d2d] border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-mono text-slate-300 uppercase mb-1">Equipment Type</label>
-              <select
-                value={equipmentId}
-                onChange={(e) => setEquipmentId(e.target.value)}
-                className="w-full bg-[#0b1d2d] border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500 font-mono cursor-pointer"
-              >
-                {EQUIPMENT_TYPES.map((eq) => (
-                  <option key={eq.id} value={eq.id}>
-                    {eq.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="flex items-end">
-              <button
-                type="submit"
-                className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold font-mono py-2.5 px-4 rounded flex items-center justify-center gap-2 transition"
-              >
-                <Search className="w-4 h-4" />
-                <span>SEARCH RATES</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
-
-      <main className="max-w-7xl mx-auto px-6 lg:px-12 mt-10">
-        <div className="flex justify-between items-center border-b border-slate-200 pb-4 mb-6">
-          <h2 className="text-xl font-bold">
-            Available Lanes: <span className="text-amber-600">{activeSearch.origin}</span> &rarr; <span className="text-amber-600">{activeSearch.destination}</span>
-          </h2>
-          <span className="text-sm text-slate-500 font-medium">{calculatedRates.length} Results Found</span>
-        </div>
-
-        <div className="space-y-4 mb-12">
-          {calculatedRates.map((carrier) => (
-            <div
-              key={carrier.id}
-              className="bg-white border border-slate-200 rounded-lg p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4 hover:shadow-md transition"
-            >
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-1">
-                  <h3 className="text-lg font-bold text-slate-900">{carrier.name}</h3>
-                  <span className="text-xs bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded border border-slate-200">
-                    {carrier.status}
-                  </span>
-                </div>
-                <div className="flex gap-6 text-xs text-slate-500 font-mono mt-2">
-                  <div>
-                    <span className="block text-slate-400">TRANSIT TIME</span>
-                    <span className="font-semibold text-slate-700">{carrier.transit}</span>
-                  </div>
-                  <div>
-                    <span className="block text-slate-400">FREQUENCY</span>
-                    <span className="font-semibold text-slate-700">{carrier.frequency}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-4 md:pt-0">
-                <div className="text-right">
-                  <span className="block text-xs font-mono text-slate-400 uppercase">TOTAL RATE</span>
-                  <span className="text-2xl font-bold text-slate-900 font-mono">
-                    ${carrier.totalRate.toLocaleString()} <span className="text-xs text-slate-500 font-normal">USD</span>
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleBookNow(carrier)}
-                  className="bg-slate-900 hover:bg-slate-800 text-white font-mono font-bold text-xs py-3 px-6 rounded transition"
+          <form
+            onSubmit={handleSearch}
+            className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-[#0b1d2d] p-4 rounded-[4px] border border-[#38485a] items-end"
+          >
+            {/* Origin Port */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-mono text-gray-400 uppercase tracking-wider">
+                Origin Port
+              </label>
+              <div className="relative">
+                <select
+                  value={searchOrigin}
+                  onChange={(e) => setSearchOrigin(e.target.value)}
+                  className="w-full bg-[#182838] text-white border border-[#38485a] rounded px-3 py-2.5 text-sm appearance-none focus:outline-none focus:border-brand-orange cursor-pointer"
                 >
-                  BOOK NOW
-                </button>
+                  <option value="Shanghai (CNSHA)">Shanghai (CNSHA)</option>
+                  <option value="Rotterdam (NLRTM)">Rotterdam (NLRTM)</option>
+                  <option value="Los Angeles (USLAX)">Los Angeles (USLAX)</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
               </div>
             </div>
-          ))}
-        </div>
+
+            {/* Equipment Type */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-mono text-gray-400 uppercase tracking-wider">
+                Equipment Type
+              </label>
+              <div className="relative">
+                <select
+                  value={searchEquipment}
+                  onChange={(e) => setSearchEquipment(e.target.value)}
+                  className="w-full bg-[#182838] text-white border border-[#38485a] rounded px-3 py-2.5 text-sm appearance-none focus:outline-none focus:border-brand-orange cursor-pointer"
+                >
+                  <option value="All Equipment Types">All Equipment Types</option>
+                  <option value="20ft Standard Steel">20' Standard Steel</option>
+                  <option value="40ft High Cube">40' High Cube</option>
+                  <option value="40ft Refrigerated">40' Refrigerated</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+              </div>
+            </div>
+
+            {/* Ship Date */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-mono text-gray-400 uppercase tracking-wider">
+                Ship Date
+              </label>
+              <input
+                type="date"
+                value={searchDate}
+                onChange={(e) => setSearchDate(e.target.value)}
+                className="w-full bg-[#182838] text-white border border-[#38485a] rounded px-3 py-2.5 text-sm focus:outline-none focus:border-brand-orange cursor-pointer"
+              />
+            </div>
+
+            {/* Botón Search Rates */}
+            <button
+              type="submit"
+              onClick={handleSearch}
+              className="w-full bg-brand-orange hover:brightness-95 text-[#181c1e] font-mono font-bold text-xs uppercase px-4 py-3 rounded transition flex items-center justify-center gap-2 cursor-pointer h-[42px]"
+            >
+              <Search className="size-4" />
+              Search Rates
+            </button>
+          </form>
+        </section>
+
+        {/* Listado de Rutas (Available Lanes) */}
+        <section className="flex flex-col gap-4">
+          <div className="flex justify-between items-center border-b border-[#c4c6cd] pb-2">
+            <div>
+              <h2 className="text-xl font-bold text-[#041627]">Available Lanes</h2>
+              <p className="text-xs text-[#74777d] font-mono mt-0.5">
+                Routes for <span className="font-bold text-[#041627]">{appliedFilters.origin}</span> • {appliedFilters.equipment}
+              </p>
+            </div>
+            <span className="text-sm font-mono text-[#74777d]">
+              {filteredLanes.length} {filteredLanes.length === 1 ? 'Result Found' : 'Results Found'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            {filteredLanes.length === 0 ? (
+              <div className="bg-white p-8 rounded border border-[#c4c6cd] text-center font-mono text-sm text-gray-500">
+                No shipping routes available matching your search criteria.
+              </div>
+            ) : (
+              filteredLanes.map((lane) => {
+                const calculatedRate = Math.round(lane.rate * mult);
+
+                return (
+                  <div
+                    key={lane.id}
+                    className="bg-white border border-[#c4c6cd] rounded-[5px] p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm hover:border-[#041627] transition cursor-pointer"
+                    onClick={() => setSelectedLane({ ...lane, rate: calculatedRate })}
+                  >
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono font-bold text-lg text-[#041627]">{lane.carrier}</span>
+                        <span className="text-xs font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-medium">
+                          {lane.status}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-4 text-sm text-[#44474c] font-mono">
+                        <span className="flex items-center gap-1">
+                          <Route className="size-4 text-[#74777d]" />
+                          {lane.code}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="size-4 text-[#74777d]" />
+                          {lane.transitTime}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="size-4 text-[#74777d]" />
+                          {lane.frequency}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-[#ebeef0] pt-3 md:pt-0">
+                      <div className="text-right">
+                        <span className="text-xs font-mono text-[#74777d] uppercase block">
+                          Base Rate ({appliedFilters.equipment})
+                        </span>
+                        <span className="text-xl font-mono font-bold text-[#041627]">
+                          ${calculatedRate.toLocaleString()} USD
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const containerId = getContainerId(appliedFilters.equipment);
+                          addToCart(containerId, appliedFilters.origin, appliedFilters.date);
+                        }}
+                        className="bg-brand-orange hover:brightness-95 text-[#181c1e] font-mono font-bold text-xs px-4 py-2.5 rounded transition uppercase"
+                      >
+                        Book Lane
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </section>
+
+        {/* Desglose de Tarifas */}
+        {selectedLane && (
+          <RateBreakdown
+            lane={selectedLane}
+            onClose={() => setSelectedLane(null)}
+            onBook={() => {
+              const containerId = getContainerId(appliedFilters.equipment);
+              addToCart(containerId, appliedFilters.origin, appliedFilters.date);
+              setSelectedLane(null);
+            }}
+          />
+        )}
+
       </main>
+      <Footer />
     </div>
   );
 }
