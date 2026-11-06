@@ -9,6 +9,28 @@ export default function Rates() {
   const [origin, setOrigin] = useState('Shanghai (CNSHA)');
   const [destination, setDestination] = useState('Los Angeles (USLAX)');
   const [equipment, setEquipment] = useState("40' High Cube (HC)");
+  const [searchFilters, setSearchFilters] = useState({
+  origin: 'Shanghai (CNSHA)',
+  destination: 'Los Angeles (USLAX)',
+  equipment: "40' High Cube (HC)",
+});
+
+const [error, setError] = useState('');
+
+const handleSearch = () => {
+  if (!origin.trim() || !destination.trim()) {
+    setError('Please enter origin and destination ports.');
+    return;
+  }
+
+  setError('');
+  setSearchFilters({
+    origin: origin.trim(),
+    destination: destination.trim(),
+    equipment,
+  });
+};
+  
 
   const rateQuotes = [
     {
@@ -40,6 +62,24 @@ export default function Rates() {
       price: '4,150',
     },
   ];
+
+  const availableRates = rateQuotes.map((rate) => ({
+  ...rate,
+  origin: 'Shanghai (CNSHA)',
+  destination: 'Los Angeles (USLAX)',
+  equipment: "40' High Cube (HC)",
+}));
+
+const normalize = (value) =>
+  value.trim().toLowerCase();
+
+const filteredRates = availableRates.filter((rate) =>
+  normalize(rate.origin) === normalize(searchFilters.origin) &&
+  normalize(rate.destination) === normalize(searchFilters.destination) &&
+  rate.equipment === searchFilters.equipment
+);
+
+
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-100 font-sans text-slate-900">
@@ -106,6 +146,7 @@ export default function Rates() {
             <div className="flex items-end">
               <button
                 type="button"
+                onClick={handleSearch}
                 className="w-full py-2 bg-brand-orange text-navy-900 font-bold uppercase tracking-wider text-xs rounded hover:opacity-90 transition-opacity flex items-center justify-center gap-2 h-[34px]"
               >
                 <Search className="size-4" />
@@ -122,17 +163,23 @@ export default function Rates() {
         <section className="col-span-12 lg:col-span-8 flex flex-col gap-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-200">
             <h2 className="text-base font-bold text-slate-900 font-mono">
-              Available Lanes: SHA → LAX
+            Available Lanes: {searchFilters.origin} → {searchFilters.destination}
             </h2>
             <span className="text-xs font-mono text-slate-500 bg-slate-200 px-2.5 py-0.5 rounded">
-              {rateQuotes.length} Results Found
+              {filteredRates.length} Rate Quotes
             </span>
           </div>
 
           <div className="flex flex-col gap-3">
-            {rateQuotes.map((rate) => (
-              <FreightCard key={rate.id} rate={rate} />
-            ))}
+            {filteredRates.length > 0 ? (
+              filteredRates.map((rate) => (<FreightCard key={rate.id} rate={rate} />
+
+              ))
+            ) : (
+            <p className="text-slate-500 bg-white rounded p-6">
+              No simulated rates available for this route and equipment.
+              </p>
+            )}
           </div>
         </section>
 
