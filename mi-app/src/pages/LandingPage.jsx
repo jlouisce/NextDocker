@@ -3,6 +3,7 @@ import { Map as MapIcon, MapPin, Package, Route, Search, ShieldCheck, TrendingUp
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
 import { useApp } from '../context/AppContext';
+import { cartCatalog } from '../data/mockData';
 import heroImage from '../assets/figma/hero-container.png';
 
 const bentoCard = 'border border-[#2c2c2c] rounded-[3px] p-8';
@@ -11,12 +12,33 @@ export default function LandingPage() {
   const { containers } = useApp();
   const [selectedType, setSelectedType] = useState('ALL');
   const [searchPort, setSearchPort] = useState('');
+  const [appliedPort, setAppliedPort] = useState('');
+  
   const catalogRef = useRef(null);
+  
+  const handleSearch = () => {
+  setAppliedPort(searchPort.trim().toLowerCase());
+  catalogRef.current?.scrollIntoView({
+    behavior: 'smooth',
+  });
+};
 
   const filteredContainers = containers.filter((item) => {
-    const matchesType = selectedType === 'ALL' || item.title.toLowerCase().includes(selectedType.toLowerCase());
-    return matchesType;
-  });
+  const matchesType =
+    selectedType === 'ALL' ||
+    item.title.toLowerCase().includes(selectedType.toLowerCase());
+
+  const availablePorts = cartCatalog[item.id]?.origins || [];
+
+  const matchesPort =
+    appliedPort === '' ||
+    availablePorts.some((origin) =>
+      origin.port.toLowerCase().includes(appliedPort) ||
+      origin.code.toLowerCase().includes(appliedPort)
+    );
+
+  return matchesType && matchesPort;
+});
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f3f3f3] text-black font-sans">
@@ -71,7 +93,7 @@ export default function LandingPage() {
             <div className="flex lg:items-end">
               <button
                 type="button"
-                onClick={() => catalogRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={handleSearch}
                 className="w-full h-[67px] bg-brand-orange/90 hover:bg-brand-orange flex items-center justify-center gap-4 text-[15px] tracking-[0.09em] transition-colors"
               >
                 <Search className="size-6" aria-hidden="true" />
@@ -92,6 +114,18 @@ export default function LandingPage() {
         </div>
 
         <div className="max-w-[1633px] mx-auto grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8 lg:gap-[40px]">
+
+          {filteredContainers.length === 0 && (
+            <div className="col-span-full text-center py-12">
+              <h3 className="text-2xl font-semibold">
+                No containers found
+                </h3>
+                <p className="text-gray-500 mt-2">
+                  Try another port or container type.
+                  </p>
+                  </div>
+                )}
+          
           {filteredContainers.map((item) => (
             <article key={item.id} className="bg-[#f9f9f9] flex flex-col pb-[25px]">
               <div className="relative h-[265px] bg-slate-200 overflow-hidden">
