@@ -65,6 +65,24 @@ export default function Rates() {
     navigate('/logistics');
   };
 
+  const availableRates = rateQuotes.map((rate) => ({
+  ...rate,
+  origin: 'Shanghai (CNSHA)',
+  destination: 'Los Angeles (USLAX)',
+  equipment: "40' High Cube (HC)",
+}));
+
+const normalize = (value) =>
+  value.trim().toLowerCase();
+
+const filteredRates = availableRates.filter((rate) =>
+  normalize(rate.origin) === normalize(searchFilters.origin) &&
+  normalize(rate.destination) === normalize(searchFilters.destination) &&
+  rate.equipment === searchFilters.equipment
+);
+
+
+
   return (
     <div className="min-h-screen bg-[#f7fafc] text-[#041627] font-sans pb-16">
       <section className="bg-[#041627] text-white px-6 lg:px-12 py-12 shadow-md">
