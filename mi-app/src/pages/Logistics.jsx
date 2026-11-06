@@ -10,8 +10,9 @@ const moneyShort = (value) => `$${value.toLocaleString('en-US')}`;
 
 export default function Logistics() {
   const [orderRef, setOrderRef] = useState(null);
-  const { cart: cartState, setCartOrigin, removeFromCart, clearCart, reserveContainer } = useApp();
-  // El estado guarda { containerId, origin }; el resto de los datos sale del catálogo.
+  
+  const { cart: cartState, setCartOrigin, removeFromCart, clearCart, reserveContainer, setReservations } = useApp();
+  
   const cart = cartState
     .filter(({ containerId }) => cartCatalog[containerId])
     .map(({ containerId, origin }) => ({ id: containerId, containerId, origin, ...cartCatalog[containerId] }));
@@ -24,24 +25,32 @@ export default function Logistics() {
   const merchandise = cart.reduce((sum, item) => sum + item.unitCost, 0);
   const freight = cart.reduce((sum, item) => sum + originOf(item).freight, 0);
   const savings = cart.reduce((sum, item) => sum + Math.max(0, originOf(item, item.baseOrigin).freight - originOf(item).freight), 0);
-  // El flete ya refleja el origen elegido, así que `savings` es solo informativo y no se resta otra vez.
   const total = merchandise + freight;
 
   const handleCheckout = () => {
-    // Retroalimentación al usuario: sin backend, solo se confirma el pedido en pantalla.
     const ids = cart.map((item) => {
       const origin = originOf(item);
-      return reserveContainer(item.containerId, `${origin.port} (${origin.code})`);
+      if (typeof reserveContainer === 'function') {
+        return reserveContainer(item.containerId, `${origin.port} (${origin.code})`);
+      }
+      return `RES-${Math.floor(Math.random() * 1000000)}`;
     });
+    
+    if (typeof setReservations === 'function') {
+      setReservations(prevHistory => {
+        const historyActual = prevHistory || [];
+        return [...historyActual, ...cart];
+      });
+    }
+
     clearCart();
-    setOrderRef(ids[0]);
+    setOrderRef(ids[0] || `RES-${Math.floor(Math.random() * 1000000)}`);
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f7fafc] text-[#041627] font-sans">
       <main className="flex-1 w-full max-w-[1728px] mx-auto px-6 lg:px-[54px] py-8 lg:py-[43px] flex flex-col lg:flex-row gap-8 lg:gap-[43px] items-start">
 
-        {/* Lista de ítems */}
         <section className="flex-1 min-w-0 w-full flex flex-col gap-[22px]">
           <div className="border-b border-[#c4c6cd] pb-3">
             <h1 className="text-[32px] font-semibold leading-[43px]">Smart Cart</h1>
@@ -60,7 +69,7 @@ export default function Logistics() {
               ) : (
                 <p>Your cart is empty.</p>
               )}
-              <Link to="/marketplace" className="font-mono font-bold text-sm tracking-[0.05em] text-[#041627] underline">
+              <Link className="font-mono font-bold text-sm tracking-[0.05em] text-[#041627] underline" to="/marketplace">
                 Continue shopping
               </Link>
             </div>
@@ -87,7 +96,7 @@ export default function Logistics() {
                         aria-label={`Remove ${item.title}`}
                         className="pb-[3px] hover:opacity-60 transition-opacity shrink-0"
                       >
-                        <Trash2 className="size-5 text-[#44474c]" aria-hidden="true" />
+                        <Trash2 aria-hidden="true" className="size-5 text-[#44474c]"/>
                       </button>
                     </div>
                     <div className="grid grid-cols-2 gap-[11px] font-mono font-medium">
@@ -104,7 +113,7 @@ export default function Logistics() {
 
                   <div className="bg-[#f1f4f6] border border-[#c4c6cd] rounded-[3px] p-3 flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
                     <div className="flex items-center gap-[11px] text-[19px]">
-                      <Route className="size-4 shrink-0" aria-hidden="true" />
+                      <Route aria-hidden="true" className="size-4 shrink-0"/>
                       <span>
                         Origin: <strong className="font-bold">{origin.port} ({origin.code})</strong>
                       </span>
@@ -123,7 +132,7 @@ export default function Logistics() {
                           </option>
                         ))}
                       </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-5 text-[#6b7280]" aria-hidden="true" />
+                      <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-5 text-[#6b7280]"/>
                     </div>
                   </div>
                 </div>
@@ -143,7 +152,6 @@ export default function Logistics() {
           })}
         </section>
 
-        {/* Resumen del pedido */}
         <aside className="w-full lg:w-[432px] shrink-0">
           <div className="bg-[#041627] text-white rounded-[5px] p-[22px] flex flex-col gap-[22px]">
             <h2 className="text-[27px] font-semibold leading-[38px] border-b border-[#38485a] pb-3">Order Summary</h2>
@@ -168,7 +176,7 @@ export default function Logistics() {
             </div>
 
             <div className="bg-[#0b1d2d] rounded-[3px] p-4 flex gap-[11px] items-start text-[#b7c8de] text-[19px] leading-[26px]">
-              <Info className="size-5 mt-[2px] shrink-0 text-brand-orange" aria-hidden="true" />
+              <Info aria-hidden="true" className="size-5 mt-[2px] shrink-0 text-brand-orange"/>
               <p>
                 Optimize your origins to reduce total freight costs. Estimated delivery for current routing is{' '}
                 <strong className="font-bold">14-21 days</strong>.
@@ -187,7 +195,7 @@ export default function Logistics() {
         </aside>
       </main>
 
-      <Footer />
+      <Footer/>
     </div>
   );
 }

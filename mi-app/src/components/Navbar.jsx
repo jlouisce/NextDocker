@@ -1,78 +1,84 @@
-import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, ShoppingCart, X } from 'lucide-react';
+import { ShoppingCart, Bell, User } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
-const links = [
-  { to: '/marketplace', label: 'Marketplace' },
-  { to: '/logistics', label: 'Logistics' },
-  { to: '/rates', label: 'Rates' },
-];
-
 export default function Navbar() {
-  const { pathname } = useLocation();
-  const { cart } = useApp();
-  const [open, setOpen] = useState(false);
-  const isActive = (path) => pathname === path;
+  const { cart = [] } = useApp() || {};
+  const location = useLocation();
+
+  const isActive = (path) => location.pathname === path;
 
   return (
-    <header className="bg-[#eef1f3] sticky top-0 z-50">
-      <div className="max-w-[1728px] mx-auto px-4 sm:px-6 lg:px-[59px] h-[64px] lg:h-[101px] flex items-center justify-between gap-4">
-        <Link to="/" className="text-2xl lg:text-[32px] font-bold text-[#303030] tracking-tight">
-          NextDocker
-        </Link>
-
-        {/* Navegación de escritorio */}
-        <nav aria-label="Main" className="hidden md:flex items-center gap-8 lg:gap-[40px] font-mono text-sm lg:text-base font-bold tracking-[0.07em] text-black">
-          {links.map(({ to, label }) => (
-            <Link
-              key={to}
-              to={to}
-              className={isActive(to) ? 'border-b-2 border-black pb-1' : 'hover:opacity-70 transition-opacity'}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className="flex items-center gap-3 lg:gap-4">
-          <Link
-            to="/dashboard/login"
-            className="whitespace-nowrap font-mono font-bold text-xs sm:text-sm lg:text-base tracking-[0.07em] text-black border border-black px-2 sm:px-3 py-1.5 hover:bg-black hover:text-white transition-colors"
-          >
-            Sign in
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
+        
+        {/* Logo y Enlaces Navegación */}
+        <div className="flex items-center space-x-3 sm:space-x-8">
+          <Link to="/" className="text-base sm:text-xl font-bold tracking-tight text-slate-900 shrink-0">
+            NextDocker
           </Link>
-          <Link to="/logistics" aria-label={`Smart Cart, ${cart.length} items`} className="relative p-2 text-[#303030] hover:opacity-70 transition-opacity">
-            <ShoppingCart className="size-6" aria-hidden="true" />
+          
+          <nav className="flex items-center space-x-2 sm:space-x-6 text-xs sm:text-sm font-medium">
+            <Link
+              to="/marketplace"
+              className={`hover:text-slate-900 transition-colors ${
+                isActive('/marketplace') ? 'text-slate-900 font-semibold' : 'text-slate-500'
+              }`}
+            >
+              Marketplace
+            </Link>
+            <Link
+              to="/logistics"
+              className={`hover:text-slate-900 transition-colors ${
+                isActive('/logistics') ? 'text-slate-900 font-semibold' : 'text-slate-500'
+              }`}
+            >
+              Logistics
+            </Link>
+            <Link
+              to="/rates"
+              className={`hover:text-slate-900 transition-colors ${
+                isActive('/rates') ? 'text-slate-900 font-semibold' : 'text-slate-500'
+              }`}
+            >
+              Rates
+            </Link>
+          </nav>
+        </div>
+
+        {/* Íconos de acción a la derecha */}
+        <div className="flex items-center space-x-1 sm:space-x-3 shrink-0">
+          <Link
+            to="/profile"
+            aria-label="Perfil y cotizaciones"
+            className="relative p-1.5 sm:p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600"
+          >
+            <ShoppingCart className="h-5 w-5" />
             {cart.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-brand-orange text-[11px] font-bold text-black flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center">
                 {cart.length}
               </span>
             )}
           </Link>
+
           <button
             type="button"
-            onClick={() => setOpen((value) => !value)}
-            aria-expanded={open}
-            aria-controls="mobile-menu"
-            aria-label={open ? 'Close menu' : 'Open menu'}
-            className="md:hidden p-2 text-[#303030]"
+            aria-label="Notificaciones"
+            className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600 hidden sm:block"
           >
-            {open ? <X className="size-6" aria-hidden="true" /> : <Menu className="size-6" aria-hidden="true" />}
+            <Bell className="h-5 w-5" />
           </button>
-        </div>
-      </div>
 
-      {/* Menú móvil */}
-      {open && (
-        <nav id="mobile-menu" aria-label="Mobile" className="md:hidden border-t border-black/10 px-4 sm:px-6 py-3 flex flex-col font-mono font-bold tracking-[0.07em]">
-          {links.map(({ to, label }) => (
-            <Link key={to} to={to} onClick={() => setOpen(false)} className={`py-3 ${isActive(to) ? 'underline underline-offset-4' : ''}`}>
-              {label}
-            </Link>
-          ))}
-        </nav>
-      )}
+          <Link
+            to="/dashboard/login"
+            aria-label="Acceso usuario"
+            className="p-1.5 sm:p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-600"
+          >
+            <User className="h-5 w-5" />
+          </Link>
+        </div>
+
+      </div>
     </header>
   );
 }

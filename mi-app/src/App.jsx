@@ -7,6 +7,7 @@ import ProductDetail from './pages/ProductDetail';
 import Dashboard from './pages/dashboard/Dashboard';
 import LoginDashboard from './pages/dashboard/LoginDashboard';
 import SignUpDashboard from './pages/dashboard/SignUpDashboard';
+import Profile from './pages/Profile';
 
 export default function App() {
   // El dashboard y su acceso tienen su propio encabezado, así que no llevan el Navbar general.
@@ -26,6 +27,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/login" element={<LoginDashboard />} />
           <Route path="/dashboard/signup" element={<SignUpDashboard />} />
+          <Route path="/profile" element={<Profile />} />
         </Routes>
       </div>
     </div>
