@@ -1,5 +1,7 @@
 import { ArrowRight, Building2, Container, Lock, Mail, User } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { registerUser } from '../../utils/auth';
 
 const label = 'font-mono font-bold text-xs tracking-[0.05em] uppercase text-[#44474c]';
 const input =
@@ -12,12 +14,23 @@ const fields = [
   { name: 'password', label: 'Password', type: 'password', placeholder: '••••••••', Icon: Lock, autoComplete: 'new-password' },
 ];
 
-// Solo maqueta: el envío del formulario navega al dashboard (sin registro real por ahora).
+// Registro simulado: guarda el usuario en localStorage e inicia sesión (ver utils/auth.js).
 export default function SignUpDashboard() {
   const navigate = useNavigate();
+  const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.currentTarget));
+    if (data.password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+    const result = registerUser(data);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
     navigate('/dashboard');
   };
 
@@ -43,7 +56,9 @@ export default function SignUpDashboard() {
                   <field.Icon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#44474c] pointer-events-none" aria-hidden="true" />
                   <input
                     id={`signup-${field.name}`}
+                    name={field.name}
                     type={field.type}
+                    required
                     placeholder={field.placeholder}
                     autoComplete={field.autoComplete}
                     className={input}
@@ -55,6 +70,7 @@ export default function SignUpDashboard() {
             <label className="pt-2 flex items-start gap-2 text-sm text-[#44474c] cursor-pointer">
               <input
                 type="checkbox"
+                required
                 className="mt-[2px] size-4 rounded-[2px] border border-[#c4c6cd] accent-[#041627]"
               />
               <span>
@@ -62,6 +78,8 @@ export default function SignUpDashboard() {
                 <span className="text-[#041627]">Privacy Policy</span>.
               </span>
             </label>
+
+            {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 
             <button
               type="submit"

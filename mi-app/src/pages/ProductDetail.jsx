@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { cartCatalog, containersData } from '../data/mockData';
@@ -17,22 +17,16 @@ export default function ProductDetail() {
       title: "20' Standard Steel Container",
       price: 2100,
       unitCost: 2100,
-      image: '/assets/figma/container-20ft.jpg',
+      image: '/assets/figma/cart-20ft.jpg',
       sku: 'STD-20-BLU-441',
       payload: '21,770 kg',
     };
 
   // 1. Inicializar el origen con el valor de la búsqueda global (searchParams.origin)
-  const initialOrigin = searchParams.origin || 'Shanghai (CNSHA)';
-  const [selectedOrigin, setSelectedOrigin] = useState(initialOrigin);
+  // El origen elegido por el usuario tiene prioridad; si no, se usa el de la búsqueda global
+  const [userOrigin, setSelectedOrigin] = useState(null);
+  const selectedOrigin = userOrigin ?? (searchParams.origin || 'Shanghai (CNSHA)');
   const [destination, setDestination] = useState('Los Angeles (USLAX)');
-
-  // Sincronizar si cambia el parámetro de búsqueda en el contexto
-  useEffect(() => {
-    if (searchParams.origin) {
-      setSelectedOrigin(searchParams.origin);
-    }
-  }, [searchParams.origin]);
 
   // Lista de orígenes base
   const baseOrigins = container.origins || [

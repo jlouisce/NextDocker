@@ -1,17 +1,26 @@
 import { Container, Lock, Mail } from 'lucide-react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { loginUser } from '../../utils/auth';
 const authBg = "/assets/figma/auth-bg.jpg";
 
 const label = 'font-mono font-bold text-xs tracking-[0.05em] uppercase';
 const input =
   'w-full bg-[#f7fafc] border border-[#c4c6cd] rounded-[2px] pl-[41px] pr-[13px] py-[15px] text-base text-[#181c1e] placeholder:text-[#c4c6cd] focus:outline-none focus:border-[#041627]';
 
-// Solo maqueta: el envío del formulario navega al dashboard (sin autenticación por ahora).
+// Login simulado: valida contra los usuarios guardados en localStorage (ver utils/auth.js).
 export default function LoginDashboard() {
   const navigate = useNavigate();
+  const [error, setError] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const data = new FormData(e.currentTarget);
+    const result = loginUser(data.get('email'), data.get('password'));
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
     navigate('/dashboard');
   };
 
@@ -37,7 +46,9 @@ export default function LoginDashboard() {
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#44474c] pointer-events-none" aria-hidden="true" />
                 <input
                   id="login-email"
+                  name="email"
                   type="email"
+                  required
                   placeholder="admin@nextdocker.com"
                   autoComplete="email"
                   className={input}
@@ -53,13 +64,17 @@ export default function LoginDashboard() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#44474c] pointer-events-none" aria-hidden="true" />
                 <input
                   id="login-password"
+                  name="password"
                   type="password"
+                  required
                   placeholder="••••••••"
                   autoComplete="current-password"
                   className={input}
                 />
               </div>
             </div>
+
+            {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 
             <button
               type="submit"

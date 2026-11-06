@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { containersData } from '../data/mockData';
 
+// Contexto global: catálogo, carrito, reservas y parámetros de búsqueda
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
@@ -22,7 +23,8 @@ export function AppProvider({ children }) {
       if (!savedCart) return [];
       const parsed = JSON.parse(savedCart);
       return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
+    } catch {
+      // Si el JSON guardado está corrupto, se arranca con lista vacía
       return [];
     }
   });
@@ -33,7 +35,8 @@ export function AppProvider({ children }) {
       if (!savedReservations) return [];
       const parsed = JSON.parse(savedReservations);
       return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
+    } catch {
+      // Si el JSON guardado está corrupto, se arranca con lista vacía
       return [];
     }
   });
@@ -65,13 +68,11 @@ export function AppProvider({ children }) {
   };
 
   const removeFromCart = (targetId) => {
+    // Se elimina por cartItemId (único). Solo los ítems antiguos sin ese campo
+    // se comparan por containerId, para no borrar otros ítems del mismo contenedor.
     setCart((prevCart) =>
-      (prevCart || []).filter(
-        (item, idx) =>
-          item.cartItemId !== targetId &&
-          item.containerId !== targetId &&
-          item.id !== targetId &&
-          idx !== targetId
+      (prevCart || []).filter((item) =>
+        item.cartItemId ? item.cartItemId !== targetId : item.containerId !== targetId
       )
     );
   };
@@ -91,7 +92,9 @@ export function AppProvider({ children }) {
     setCart([]);
     try {
       localStorage.removeItem('nextdocker_cart');
-    } catch (e) {}
+    } catch {
+      // localStorage no disponible: se ignora
+    }
   };
 
   return (
@@ -115,6 +118,8 @@ export function AppProvider({ children }) {
   );
 }
 
+// Hook de consumo del contexto global
+// eslint-disable-next-line react-refresh/only-export-components
 export function useApp() {
   const context = useContext(AppContext);
   if (!context) {

@@ -1,4 +1,3 @@
-import React from 'react';
 import { FileText } from 'lucide-react';
 
 export default function RateBreakdown({ items, total = '3,250' }) {

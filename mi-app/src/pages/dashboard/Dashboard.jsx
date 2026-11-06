@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, Flag, MapPin, Receipt, Search, Ship, TrendingDown, Waves, Zap } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { getSession } from '../../utils/auth';
 import Footer from '../../components/Footer';
 import { useApp } from '../../context/AppContext';
 import { equipmentOptions, lanesData } from '../../data/mockData';
@@ -29,7 +30,13 @@ const field =
   'w-full bg-[#f7fafc] border border-[#c4c6cd] rounded-[4px] py-[13px] text-base text-[#181c1e] focus:outline-none focus:border-[#041627]';
 const card = 'bg-white border border-[#c4c6cd] shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06)]';
 
+// Dashboard protegido: sin sesión (simulada) se redirige al login.
 export default function Dashboard() {
+  if (!getSession()) return <Navigate to="/dashboard/login" replace />;
+  return <DashboardContent />;
+}
+
+function DashboardContent() {
   const navigate = useNavigate();
   const { addToCart } = useApp();
   const [form, setForm] = useState({ origin: 'Shanghai (CNSHA)', destination: 'Los Angeles (USLAX)', equipment: '40ft-hc' });

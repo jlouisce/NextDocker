@@ -8,6 +8,9 @@ import { cartCatalog } from '../data/mockData';
 const money = (value) => `$${(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const moneyShort = (value) => `$${(value || 0).toLocaleString('en-US')}`;
 
+// Genera una referencia de reserva aleatoria (ej. RES-123456)
+const generarReferencia = () => `RES-${Math.floor(100000 + Math.random() * 900000)}`;
+
 export default function Logistics() {
   const [orderRef, setOrderRef] = useState(null);
   
@@ -76,7 +79,7 @@ export default function Logistics() {
   const handleSingleCheckout = (itemToProcess) => {
     const originObj = originOf(itemToProcess);
     const originLabel = `${originObj.port} (${originObj.code})`;
-    const newRef = `RES-${Math.floor(100000 + Math.random() * 900000)}`;
+    const newRef = generarReferencia();
 
     const processedItem = {
       ...itemToProcess,
@@ -97,7 +100,7 @@ export default function Logistics() {
   const handleCheckoutAll = () => {
     if (cart.length === 0) return;
 
-    const newRef = `RES-${Math.floor(100000 + Math.random() * 900000)}`;
+    const newRef = generarReferencia();
 
     const itemsToProcess = cart.map((item) => {
       const originObj = originOf(item);

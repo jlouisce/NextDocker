@@ -1,41 +1,39 @@
 # 🚢 NextDocker
 
-NextDocker is a global e-commerce platform specialized in the commercialization of shipping containers. Designed to deliver maximum logistics flexibility and cost efficiency, it empowers customers to buy containers located anywhere in the world with advanced routing options: users can dynamically change the departure/origin location right from the shopping cart to lower shipping costs or select faster delivery routes.
+NextDocker is a web marketplace for buying shipping containers. Buyers can change the departure/origin port right from the shopping cart to lower shipping costs or pick faster routes.
 
-## ✨ Key Features
+## ✨ Features
 
-* **Global Container Marketplace:** Browse and purchase shipping containers available in ports and depots worldwide.
-* **Smart Logistics Optimization:** Enable buyers to modify the origin port to prioritize either cost savings or faster transit times.
-* **Real-Time Freight Calculation:** Integrated with third-party logistics APIs to calculate real-time freight pricing from point A (origin) to point B (destination).
-* **Secure & Scalable Architecture:** Reliable user authentication, session management, and real-time database queries.
+* **Container marketplace:** browse containers, filter by origin port, type and ship date, and open a detail page per container.
+* **Smart Cart (`/logistics`):** change the origin port of each item, see freight cost updates, and check out one item or the whole cart.
+* **Freight rates (`/rates`):** search rates between ports and compare carriers.
+* **Profile (`/profile`):** order history and current cart.
+* **Admin dashboard (`/dashboard`):** lane search, rate trends and booking. Protected by a simulated login/sign-up.
 
-## 🛠️ Tech Stack
+## 🛠️ Tech Stack (current)
 
-Built with a modern tech stack to ensure optimal performance, scalability, and developer experience:
+* **React 19** + **Vite** — UI and dev tooling.
+* **React Router 7** — navigation between screens.
+* **Tailwind CSS 3** — responsive styling (mobile and desktop).
+* **Context API** (`src/context/AppContext.jsx`) — global state: containers, cart, reservations and search params.
+* **`localStorage`** — local persistence of the cart, reservations, users and session.
+* **lucide-react** — icons.
+* Data comes from mock files (`src/data/mockData.js`); there is no backend yet.
 
-* **Frontend:** [React](https://reactjs.org/) — Interactive user interface library.
-* **Language:** [TypeScript](https://www.typescriptlang.org/) — Type-safe code for reliability and seamless scalability.
-* **Backend & Database:** [Supabase](https://supabase.com/) — PostgreSQL database and authentication.
-* **Logistics Engine:** External RESTful APIs for real-time shipping rate lookup.
-* **Deployment & Hosting:** [Firebase Hosting](https://firebase.google.com/) — Fast, secure, and globally distributed static hosting.
+## 🗂️ Project structure
 
-## 🚀 Prerequisites
-
-Before setting up the project locally, make sure you have installed and configured the following:
-
-* [Node.js](https://nodejs.org/) (v16 or higher)
-* Package manager: `npm` or `yarn`
-* A [Supabase](https://supabase.com/) account with an active project.
-* A [Firebase](https://firebase.google.com/) account with the Firebase CLI installed (`npm install -g firebase-tools`).
-* API keys from your designated shipping/freight rate service provider.
-
-## 📌 Estado actual (MVP v0.2)
-
-El código actual es un **frontend-only** en JavaScript (React + Vite + Tailwind + React Router) dentro de `mi-app/`. Usa datos mock (`src/data/mockData.js`) y persiste en `localStorage`. TypeScript, Supabase, Firebase y la API de fletes descritos arriba son el stack objetivo y aún no están integrados.
-
-Páginas: Landing/Marketplace (`/`, `/marketplace`), Tracking, Logistics, Rates y Profile.
+```
+mi-app/src
+├── components/   Navbar, Footer, FreightCard, MarketTrend, RateBreakdown
+├── context/      AppContext (global state + localStorage)
+├── data/         mockData.js
+├── pages/        LandingPage, ProductDetail, Logistics, Rates, Profile, dashboard/
+└── utils/        auth.js (simulated authentication)
+```
 
 ## ⚙️ Setup & Installation
+
+Requires [Node.js](https://nodejs.org/) 18 or higher.
 
 1. **Clone the repository:**
    ```bash
@@ -46,8 +44,16 @@ Páginas: Landing/Marketplace (`/`, `/marketplace`), Tracking, Logistics, Rates 
    ```bash
    npm install
    ```
-3. **Run the dev server:**
+3. **Run the dev server** (http://localhost:5173):
    ```bash
    npm run dev
    ```
 4. **Other scripts:** `npm run build`, `npm run preview`, `npm run lint`.
+
+## 🔐 About the login
+
+Login and sign-up are a **demo only**: users are stored in the browser's `localStorage` (the password in plain text) and there is no real server-side authentication. Do not use real credentials.
+
+## 🧭 Roadmap
+
+Planned for a future version, not yet in the code: TypeScript, a Supabase backend (database and real authentication), third-party freight-rate APIs and Firebase Hosting.
