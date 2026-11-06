@@ -1,246 +1,334 @@
 import { useState } from 'react';
-import { Search, ChevronDown, Route, Clock, Calendar } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ChevronDown, Route, Clock, Calendar, RotateCcw, CheckCircle2, X } from 'lucide-react';
 import Footer from '../components/Footer';
 import RateBreakdown from '../components/RateBreakdown';
 import { useApp } from '../context/AppContext';
 import { lanesData } from '../data/mockData';
 
+const ALL = 'all';
+
+// Tipos de equipo: id de contenedor del carrito y multiplicador de tarifa sobre la base (40' HC)
+const EQUIPMENT = {
+  [ALL]: { label: 'All Equipment Types', containerId: '40ft-hc', mult: 1 },
+  '20ft': { label: "20' Standard Steel", containerId: '20ft-standard', mult: 0.75 },
+  '40hc': { label: "40' High Cube", containerId: '40ft-hc', mult: 1 },
+  reefer: { label: "40' Refrigerated", containerId: 'reefer', mult: 1.4 },
+};
+
+const SORTS = [
+  { id: 'price', label: 'Cheapest' },
+  { id: 'transit', label: 'Fastest' },
+  { id: 'carrier', label: 'Carrier A-Z' },
+];
+
+const unique = (list) => [...new Set(list)];
+const days = (text) => parseInt(text, 10) || 0;
+const money = (n) => `$${n.toLocaleString('en-US')}`;
+
+// Fecha de llegada estimada = fecha de envío + días de tránsito
+const arrivalDate = (shipDate, transit) => {
+  const d = new Date(`${shipDate}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return '—';
+  d.setDate(d.getDate() + days(transit));
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+// Desglose estimado de una tarifa (porcentajes fijos sobre el total)
+const buildBreakdown = (rate) => {
+  const docs = 50;
+  const net = rate - docs;
+  const parts = [
+    ['Base Ocean Freight', Math.round(net * 0.72)],
+    ['BAF (Fuel)', Math.round(net * 0.14)],
+    ['CAF', Math.round(net * 0.04)],
+  ];
+  parts.push(['Port Handling (THC)', net - parts.reduce((s, [, v]) => s + v, 0)]);
+  parts.push(['Documentation', docs]);
+  return parts.map(([label, amount]) => ({ label, amount: money(amount) }));
+};
+
+const selectClass =
+  'w-full bg-[#182838] text-white border border-[#38485a] rounded px-3 py-2.5 text-sm appearance-none focus:outline-none focus:border-brand-orange cursor-pointer';
+const labelClass = 'text-xs font-mono text-gray-400 uppercase tracking-wider';
+
 export default function Rates() {
-  const { origin, setOrigin, shipDate, setShipDate, addToCart } = useApp();
+  const { searchParams, updateSearchParams, addToCart } = useApp();
 
-  // Estados de entrada del formulario
-  const [searchOrigin, setSearchOrigin] = useState(origin || 'Shanghai (CNSHA)');
-  const [searchEquipment, setSearchEquipment] = useState('40ft High Cube');
-  const [searchDate, setSearchDate] = useState(shipDate || '2026-11-26');
-
-  // Estado que actualiza los resultados en pantalla tras hacer clic en SEARCH RATES
-  const [appliedFilters, setAppliedFilters] = useState({
-    origin: origin || 'Shanghai (CNSHA)',
-    equipment: '40ft High Cube',
-    date: shipDate || '2026-11-26',
-  });
+  // Filtros: se aplican al instante, sin botón de búsqueda
+  const [origin, setOrigin] = useState(searchParams.origin || ALL);
+  const [destination, setDestination] = useState(ALL);
+  const [equipment, setEquipment] = useState(ALL);
+  const [shipDate, setShipDate] = useState(searchParams.shipDate);
+  const [sortBy, setSortBy] = useState('price');
 
   const [selectedLane, setSelectedLane] = useState(null);
+  const [booked, setBooked] = useState(null); // aviso tras agregar al carrito
 
-  // Ejecución de la búsqueda al hacer clic o submit
-  const handleSearch = (e) => {
-    if (e) e.preventDefault();
-    setOrigin(searchOrigin);
-    setShipDate(searchDate);
-    setAppliedFilters({
-      origin: searchOrigin,
-      equipment: searchEquipment,
-      date: searchDate,
+  const origins = unique(lanesData.map((l) => l.origin));
+  const destinations = unique(lanesData.map((l) => l.destination));
+  const eq = EQUIPMENT[equipment];
+
+  const changeOrigin = (value) => {
+    setOrigin(value);
+    // El origen se comparte con el resto de la app (landing, detalle)
+    if (value !== ALL) updateSearchParams({ origin: value });
+  };
+
+  const changeDate = (value) => {
+    setShipDate(value);
+    if (value) updateSearchParams({ shipDate: value });
+  };
+
+  const resetFilters = () => {
+    setOrigin(ALL);
+    setDestination(ALL);
+    setEquipment(ALL);
+    setSortBy('price');
+  };
+
+  // Tarifas ya ajustadas al tipo de equipo, filtradas y ordenadas
+  const lanes = lanesData
+    .map((lane) => ({ ...lane, rate: Math.round(lane.rate * eq.mult) }))
+    .filter((l) => (origin === ALL || l.origin === origin) && (destination === ALL || l.destination === destination))
+    .sort((a, b) => {
+      if (sortBy === 'price') return a.rate - b.rate;
+      if (sortBy === 'transit') return days(a.transitTime) - days(b.transitTime);
+      return a.carrier.localeCompare(b.carrier);
     });
+
+  const cheapestId = lanes.length > 1 ? [...lanes].sort((a, b) => a.rate - b.rate)[0].id : null;
+  const fastestId = lanes.length > 1 ? [...lanes].sort((a, b) => days(a.transitTime) - days(b.transitTime))[0].id : null;
+  const avgRate = lanes.length ? Math.round(lanes.reduce((s, l) => s + l.rate, 0) / lanes.length) : 0;
+
+  const bookLane = (lane) => {
+    addToCart(eq.containerId, lane.origin, shipDate);
+    setBooked(lane);
+    setSelectedLane(null);
   };
 
-  const getContainerId = (equip) => {
-    if (equip.includes('20ft')) return '20ft-standard';
-    if (equip.includes('Reefer') || equip.includes('Refrigerated')) return 'reefer';
-    return '40ft-hc';
-  };
-
-  const getRateMultiplier = (equip) => {
-    if (equip.includes('20ft')) return 0.75;
-    if (equip.includes('Reefer') || equip.includes('Refrigerated')) return 1.4;
-    return 1.0;
-  };
-
-  const mult = getRateMultiplier(appliedFilters.equipment);
-
-  // Extrae el código de 5 letras entre paréntesis (ej: "CNSHA", "NLRTM", "USLAX")
-  const extractCode = (str) => {
-    const match = str.match(/\(([A-Z]+)\)/);
-    return match ? match[1] : str;
-  };
-
-  const filterCode = extractCode(appliedFilters.origin);
-
-  // Filtrado flexible por nombre de puerto o código de ruta
-  const filteredLanes = lanesData.filter((lane) => {
-    if (!appliedFilters.origin) return true;
-    return (
-      lane.origin.toLowerCase().includes(appliedFilters.origin.toLowerCase()) ||
-      lane.code.includes(filterCode)
-    );
-  });
+  const hasFilters = origin !== ALL || destination !== ALL || equipment !== ALL;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f7fafc] text-[#041627] font-sans">
       <main className="flex-1 w-full max-w-[1728px] mx-auto px-6 lg:px-[54px] py-8 flex flex-col gap-8">
-        
-        {/* Header & Search Form */}
+        {/* Encabezado y filtros */}
         <section className="bg-[#041627] text-white p-6 lg:p-8 rounded-[5px] flex flex-col gap-6">
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold">Freight Rates & Routes</h1>
             <p className="text-gray-300 text-sm mt-1">
-              Compare ocean freight rates and schedules across major shipping corridors.
+              Compare ocean freight rates and schedules across major shipping corridors. Results update as you change the filters.
             </p>
           </div>
 
-          <form
-            onSubmit={handleSearch}
-            className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-[#0b1d2d] p-4 rounded-[4px] border border-[#38485a] items-end"
-          >
-            {/* Origin Port */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-[#0b1d2d] p-4 rounded-[4px] border border-[#38485a] items-end">
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-mono text-gray-400 uppercase tracking-wider">
-                Origin Port
-              </label>
+              <label htmlFor="rates-origin" className={labelClass}>Origin Port</label>
               <div className="relative">
-                <select
-                  value={searchOrigin}
-                  onChange={(e) => setSearchOrigin(e.target.value)}
-                  className="w-full bg-[#182838] text-white border border-[#38485a] rounded px-3 py-2.5 text-sm appearance-none focus:outline-none focus:border-brand-orange cursor-pointer"
-                >
-                  <option value="Shanghai (CNSHA)">Shanghai (CNSHA)</option>
-                  <option value="Rotterdam (NLRTM)">Rotterdam (NLRTM)</option>
-                  <option value="Los Angeles (USLAX)">Los Angeles (USLAX)</option>
+                <select id="rates-origin" value={origin} onChange={(e) => changeOrigin(e.target.value)} className={selectClass}>
+                  <option value={ALL}>All origins</option>
+                  {origins.map((o) => (
+                    <option key={o} value={o}>{o}</option>
+                  ))}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
               </div>
             </div>
 
-            {/* Equipment Type */}
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-mono text-gray-400 uppercase tracking-wider">
-                Equipment Type
-              </label>
+              <label htmlFor="rates-destination" className={labelClass}>Destination Port</label>
               <div className="relative">
-                <select
-                  value={searchEquipment}
-                  onChange={(e) => setSearchEquipment(e.target.value)}
-                  className="w-full bg-[#182838] text-white border border-[#38485a] rounded px-3 py-2.5 text-sm appearance-none focus:outline-none focus:border-brand-orange cursor-pointer"
-                >
-                  <option value="All Equipment Types">All Equipment Types</option>
-                  <option value="20ft Standard Steel">20' Standard Steel</option>
-                  <option value="40ft High Cube">40' High Cube</option>
-                  <option value="40ft Refrigerated">40' Refrigerated</option>
+                <select id="rates-destination" value={destination} onChange={(e) => setDestination(e.target.value)} className={selectClass}>
+                  <option value={ALL}>All destinations</option>
+                  {destinations.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
               </div>
             </div>
 
-            {/* Ship Date */}
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-mono text-gray-400 uppercase tracking-wider">
-                Ship Date
-              </label>
+              <label htmlFor="rates-equipment" className={labelClass}>Equipment Type</label>
+              <div className="relative">
+                <select id="rates-equipment" value={equipment} onChange={(e) => setEquipment(e.target.value)} className={selectClass}>
+                  {Object.entries(EQUIPMENT).map(([id, e]) => (
+                    <option key={id} value={id}>{e.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label htmlFor="rates-date" className={labelClass}>Ship Date</label>
               <input
+                id="rates-date"
                 type="date"
-                value={searchDate}
-                onChange={(e) => setSearchDate(e.target.value)}
+                value={shipDate}
+                onChange={(e) => changeDate(e.target.value)}
                 className="w-full bg-[#182838] text-white border border-[#38485a] rounded px-3 py-2.5 text-sm focus:outline-none focus:border-brand-orange cursor-pointer"
               />
             </div>
-
-            {/* Botón Search Rates */}
-            <button
-              type="submit"
-              onClick={handleSearch}
-              className="w-full bg-brand-orange hover:brightness-95 text-[#181c1e] font-mono font-bold text-xs uppercase px-4 py-3 rounded transition flex items-center justify-center gap-2 cursor-pointer h-[42px]"
-            >
-              <Search className="size-4" />
-              Search Rates
-            </button>
-          </form>
+          </div>
         </section>
 
-        {/* Listado de Rutas (Available Lanes) */}
+        {/* Aviso de reserva */}
+        {booked && (
+          <div role="status" className="flex items-center justify-between gap-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded px-4 py-3 text-sm">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 className="size-4 shrink-0" />
+              {booked.carrier} ({booked.code}) added to your cart.
+            </span>
+            <span className="flex items-center gap-4">
+              <Link to="/logistics" className="font-mono font-bold text-xs uppercase underline">Go to cart</Link>
+              <button type="button" onClick={() => setBooked(null)} aria-label="Dismiss" className="cursor-pointer">
+                <X className="size-4" />
+              </button>
+            </span>
+          </div>
+        )}
+
+        {/* Resultados */}
         <section className="flex flex-col gap-4">
-          <div className="flex justify-between items-center border-b border-[#c4c6cd] pb-2">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-3 border-b border-[#c4c6cd] pb-3">
             <div>
               <h2 className="text-xl font-bold text-[#041627]">Available Lanes</h2>
               <p className="text-xs text-[#74777d] font-mono mt-0.5">
-                Routes for <span className="font-bold text-[#041627]">{appliedFilters.origin}</span> • {appliedFilters.equipment}
+                {lanes.length} {lanes.length === 1 ? 'result' : 'results'}
+                {lanes.length > 0 && <> • average {money(avgRate)} USD</>} • {eq.label}
               </p>
             </div>
-            <span className="text-sm font-mono text-[#74777d]">
-              {filteredLanes.length} {filteredLanes.length === 1 ? 'Result Found' : 'Results Found'}
-            </span>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-mono text-[#74777d] uppercase">Sort by</span>
+              {SORTS.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setSortBy(s.id)}
+                  aria-pressed={sortBy === s.id}
+                  className={`px-3 py-1.5 rounded text-xs font-mono font-bold uppercase border transition cursor-pointer ${
+                    sortBy === s.id
+                      ? 'bg-[#041627] text-white border-[#041627]'
+                      : 'bg-white text-[#44474c] border-[#c4c6cd] hover:border-[#041627]'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+              {hasFilters && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono font-bold uppercase text-[#44474c] hover:text-[#041627] cursor-pointer"
+                >
+                  <RotateCcw className="size-3" /> Reset
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="grid grid-cols-1 gap-4">
-            {filteredLanes.length === 0 ? (
-              <div className="bg-white p-8 rounded border border-[#c4c6cd] text-center font-mono text-sm text-gray-500">
+            {lanes.length === 0 ? (
+              <div className="bg-white p-8 rounded border border-[#c4c6cd] text-center font-mono text-sm text-gray-500 flex flex-col items-center gap-3">
                 No shipping routes available matching your search criteria.
+                <button type="button" onClick={resetFilters} className="underline font-bold text-[#041627] cursor-pointer">
+                  Clear filters
+                </button>
               </div>
             ) : (
-              filteredLanes.map((lane) => {
-                const calculatedRate = Math.round(lane.rate * mult);
-
-                return (
-                  <div
-                    key={lane.id}
-                    className="bg-white border border-[#c4c6cd] rounded-[5px] p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm hover:border-[#041627] transition cursor-pointer"
-                    onClick={() => setSelectedLane({ ...lane, rate: calculatedRate })}
-                  >
-                    <div className="flex flex-col gap-2">
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono font-bold text-lg text-[#041627]">{lane.carrier}</span>
-                        <span className="text-xs font-mono bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-medium">
-                          {lane.status}
-                        </span>
-                      </div>
-                      
-                      <div className="flex items-center gap-4 text-sm text-[#44474c] font-mono">
-                        <span className="flex items-center gap-1">
-                          <Route className="size-4 text-[#74777d]" />
-                          {lane.code}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="size-4 text-[#74777d]" />
-                          {lane.transitTime}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="size-4 text-[#74777d]" />
-                          {lane.frequency}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-[#ebeef0] pt-3 md:pt-0">
-                      <div className="text-right">
-                        <span className="text-xs font-mono text-[#74777d] uppercase block">
-                          Base Rate ({appliedFilters.equipment})
-                        </span>
-                        <span className="text-xl font-mono font-bold text-[#041627]">
-                          ${calculatedRate.toLocaleString()} USD
-                        </span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const containerId = getContainerId(appliedFilters.equipment);
-                          addToCart(containerId, appliedFilters.origin, appliedFilters.date);
-                        }}
-                        className="bg-brand-orange hover:brightness-95 text-[#181c1e] font-mono font-bold text-xs px-4 py-2.5 rounded transition uppercase"
+              lanes.map((lane) => (
+                <div
+                  key={lane.id}
+                  className="bg-white border border-[#c4c6cd] rounded-[5px] p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm hover:border-[#041627] transition cursor-pointer"
+                  onClick={() => setSelectedLane(lane)}
+                >
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono font-bold text-lg text-[#041627]">{lane.carrier}</span>
+                      <span
+                        className={`text-xs font-mono px-2 py-0.5 rounded font-medium ${
+                          lane.status === 'AVAILABLE' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                        }`}
                       >
-                        Book Lane
-                      </button>
+                        {lane.status}
+                      </span>
+                      {lane.id === cheapestId && (
+                        <span className="text-[10px] font-mono font-bold bg-brand-orange text-[#181c1e] px-2 py-0.5 rounded uppercase">Cheapest</span>
+                      )}
+                      {lane.id === fastestId && (
+                        <span className="text-[10px] font-mono font-bold bg-[#041627] text-white px-2 py-0.5 rounded uppercase">Fastest</span>
+                      )}
                     </div>
+
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[#44474c] font-mono">
+                      <span className="flex items-center gap-1">
+                        <Route className="size-4 text-[#74777d]" />
+                        {lane.code}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="size-4 text-[#74777d]" />
+                        {lane.transitTime}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="size-4 text-[#74777d]" />
+                        {lane.frequency}
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono text-[#74777d]">
+                      Est. arrival: <strong className="text-[#041627]">{arrivalDate(shipDate, lane.transitTime)}</strong>
+                    </span>
                   </div>
-                );
-              })
+
+                  <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-[#ebeef0] pt-3 md:pt-0">
+                    <div className="text-right">
+                      <span className="text-xs font-mono text-[#74777d] uppercase block">Base Rate ({eq.label})</span>
+                      <span className="text-xl font-mono font-bold text-[#041627]">{money(lane.rate)} USD</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        bookLane(lane);
+                      }}
+                      className="bg-brand-orange hover:brightness-95 text-[#181c1e] font-mono font-bold text-xs px-4 py-2.5 rounded transition uppercase cursor-pointer"
+                    >
+                      Book Lane
+                    </button>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </section>
 
-        {/* Desglose de Tarifas */}
+        {/* Desglose de tarifa de la ruta seleccionada */}
         {selectedLane && (
-          <RateBreakdown
-            lane={selectedLane}
-            onClose={() => setSelectedLane(null)}
-            onBook={() => {
-              const containerId = getContainerId(appliedFilters.equipment);
-              addToCart(containerId, appliedFilters.origin, appliedFilters.date);
-              setSelectedLane(null);
-            }}
-          />
+          <section className="flex flex-col gap-3 max-w-xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-mono font-bold uppercase text-[#44474c]">
+                {selectedLane.carrier} • {selectedLane.code}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setSelectedLane(null)}
+                className="text-xs font-mono font-bold uppercase text-[#44474c] hover:text-[#041627] cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+            <RateBreakdown items={buildBreakdown(selectedLane.rate)} total={selectedLane.rate.toLocaleString('en-US')} />
+            <button
+              type="button"
+              onClick={() => bookLane(selectedLane)}
+              className="bg-brand-orange hover:brightness-95 text-[#181c1e] font-mono font-bold text-xs px-4 py-2.5 rounded transition uppercase cursor-pointer"
+            >
+              Book this lane
+            </button>
+          </section>
         )}
-
       </main>
       <Footer />
     </div>
