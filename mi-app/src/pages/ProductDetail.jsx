@@ -7,7 +7,7 @@ import Footer from '../components/Footer';
 export default function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { searchParams = {}, addToCart } = useApp() || {};
+  const { searchParams = {}, updateSearchParams, addToCart } = useApp() || {};
 
   // Obtención del contenedor actual
   const container =
@@ -22,11 +22,12 @@ export default function ProductDetail() {
       payload: '21,770 kg',
     };
 
-  // 1. Inicializar el origen con el valor de la búsqueda global (searchParams.origin)
-  // El origen elegido por el usuario tiene prioridad; si no, se usa el de la búsqueda global
+  // Inicializar origen y destino desde el contexto global (searchParams), priorizando cambios locales
   const [userOrigin, setSelectedOrigin] = useState(null);
+  const [userDestination, setSelectedDestination] = useState(null);
+
   const selectedOrigin = userOrigin ?? (searchParams.origin || 'Shanghai (CNSHA)');
-  const [destination, setDestination] = useState('Los Angeles (USLAX)');
+  const selectedDestination = userDestination ?? (searchParams.destination || 'Los Angeles (USLAX)');
 
   // Lista de orígenes base
   const baseOrigins = container.origins || [
@@ -35,7 +36,7 @@ export default function ProductDetail() {
     { port: 'Los Angeles', code: 'USLAX', freight: 1300 },
   ];
 
-  // 2. Comprobar si el origen ingresado (ej. "medellin") existe en los base; si no, incluirlo dinámicamente
+  // Comprobar si el origen ingresado existe en los base; si no, incluirlo dinámicamente
   const hasMatch = baseOrigins.some(
     (o) =>
       o.code.toLowerCase() === selectedOrigin.toLowerCase() ||
@@ -47,15 +48,31 @@ export default function ProductDetail() {
     : [
         {
           port: selectedOrigin.includes('(') ? selectedOrigin.split('(')[0].trim() : selectedOrigin,
-          code: selectedOrigin.includes('(') ? selectedOrigin.split('(')[1]?.replace(')', '').trim() : selectedOrigin.toUpperCase(),
+          code: selectedOrigin.includes('(')
+            ? selectedOrigin.split('(')[1]?.replace(')', '').trim()
+            : selectedOrigin.toUpperCase(),
           freight: 1350,
         },
         ...baseOrigins,
       ];
 
+  const handleOriginChange = (value) => {
+    setSelectedOrigin(value);
+    if (typeof updateSearchParams === 'function') {
+      updateSearchParams({ origin: value });
+    }
+  };
+
+  const handleDestinationChange = (value) => {
+    setSelectedDestination(value);
+    if (typeof updateSearchParams === 'function') {
+      updateSearchParams({ destination: value });
+    }
+  };
+
   const handleAddToCart = () => {
     if (typeof addToCart === 'function') {
-      addToCart(container.id, selectedOrigin, searchParams.shipDate);
+      addToCart(container.id, selectedOrigin, searchParams.shipDate, selectedDestination);
     }
     navigate('/logistics');
   };
@@ -85,7 +102,8 @@ export default function ProductDetail() {
               </span>
               <h1 className="text-3xl font-bold text-slate-900 mt-2">{container.title}</h1>
               <p className="text-2xl font-bold font-mono text-amber-600 mt-2">
-                ${(container.price || container.unitCost || 2100).toLocaleString()} <span className="text-xs text-slate-500">USD / unit</span>
+                ${(container.price || container.unitCost || 2100).toLocaleString()}{' '}
+                <span className="text-xs text-slate-500">USD / unit</span>
               </p>
             </div>
 
@@ -114,7 +132,7 @@ export default function ProductDetail() {
                   </label>
                   <select
                     value={selectedOrigin}
-                    onChange={(e) => setSelectedOrigin(e.target.value)}
+                    onChange={(e) => handleOriginChange(e.target.value)}
                     className="w-full bg-[#041627] border border-slate-600 rounded px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 cursor-pointer font-mono"
                   >
                     {originsOptions.map((o, idx) => {
@@ -134,8 +152,8 @@ export default function ProductDetail() {
                   </label>
                   <input
                     type="text"
-                    value={destination}
-                    onChange={(e) => setDestination(e.target.value)}
+                    value={selectedDestination}
+                    onChange={(e) => handleDestinationChange(e.target.value)}
                     placeholder="e.g. Los Angeles (USLAX)"
                     className="w-full bg-[#041627] border border-slate-600 rounded px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-500 font-mono"
                   />

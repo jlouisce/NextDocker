@@ -9,12 +9,16 @@ export function AppProvider({ children }) {
 
   const [searchParams, setSearchParams] = useState({
     origin: 'Shanghai (CNSHA)',
+    destination: 'Los Angeles (USLAX)',
     containerType: 'all',
     shipDate: new Date().toISOString().split('T')[0],
   });
 
-  const updateSearchParams = (params) => {
-    setSearchParams((prev) => ({ ...prev, ...params }));
+  const updateSearchParams = (newParams) => {
+    setSearchParams((prev) => ({
+      ...prev,
+      ...newParams,
+    }));
   };
 
   const [cart, setCart] = useState(() => {
@@ -57,12 +61,19 @@ export function AppProvider({ children }) {
     }
   }, [reservations]);
 
-  const addToCart = (containerId, customOrigin, customShipDate) => {
+  const addToCart = (containerId, customOrigin, customShipDate, customDestination) => {
+    const isObj = typeof containerId === 'object' && containerId !== null;
+    const resolvedId = isObj ? containerId.containerId || containerId.id : containerId;
+    const resolvedOrigin = isObj ? containerId.origin : customOrigin;
+    const resolvedDate = isObj ? containerId.shipDate : customShipDate;
+    const resolvedDestination = isObj ? containerId.destination : customDestination;
+
     const newItem = {
       cartItemId: `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      containerId: containerId || '20ft-standard',
-      origin: customOrigin || searchParams.origin || 'Shanghai (CNSHA)',
-      shipDate: customShipDate || searchParams.shipDate || new Date().toISOString().split('T')[0],
+      containerId: resolvedId || '20ft-standard',
+      origin: resolvedOrigin || searchParams.origin || 'Shanghai (CNSHA)',
+      destination: resolvedDestination || searchParams.destination || 'Los Angeles (USLAX)',
+      shipDate: resolvedDate || searchParams.shipDate || new Date().toISOString().split('T')[0],
     };
     setCart((prevCart) => [...(prevCart || []), newItem]);
   };
@@ -88,6 +99,17 @@ export function AppProvider({ children }) {
     );
   };
 
+  const setCartDestination = (targetId, destination) => {
+    setCart((prevCart) =>
+      (prevCart || []).map((item) => {
+        if (item.cartItemId === targetId || item.containerId === targetId) {
+          return { ...item, destination };
+        }
+        return item;
+      })
+    );
+  };
+
   const clearCart = () => {
     setCart([]);
     try {
@@ -106,6 +128,7 @@ export function AppProvider({ children }) {
         addToCart,
         removeFromCart,
         setCartOrigin,
+        setCartDestination,
         clearCart,
         reservations,
         setReservations,

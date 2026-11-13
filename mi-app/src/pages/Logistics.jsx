@@ -11,12 +11,28 @@ const moneyShort = (value) => `$${(value || 0).toLocaleString('en-US')}`;
 // Genera una referencia de reserva aleatoria (ej. RES-123456)
 const generarReferencia = () => `RES-${Math.floor(100000 + Math.random() * 900000)}`;
 
+const DEFAULT_DESTINATIONS = [
+  { port: 'Los Angeles', code: 'USLAX' },
+  { port: 'Rotterdam', code: 'NLRTM' },
+  { port: 'Singapore', code: 'SGSIN' },
+  { port: 'Hamburg', code: 'DEHAM' },
+  { port: 'Shanghai', code: 'CNSHA' },
+];
+
 export default function Logistics() {
   const [orderRef, setOrderRef] = useState(null);
-  
-  const { cart: cartState = [], setCartOrigin, removeFromCart, clearCart, setReservations } = useApp();
-  
-  // Mapeo defensivo de elementos en el carrito manteniendo cartItemId y origen dinámico
+
+  const {
+    cart: cartState = [],
+    setCartOrigin,
+    setCartDestination,
+    removeFromCart,
+    clearCart,
+    setReservations,
+    searchParams = {},
+  } = useApp();
+
+  // Mapeo defensivo de elementos en el carrito manteniendo cartItemId, origen y destino dinámico
   const cart = cartState
     .map((rawItem, index) => {
       const containerId = rawItem.containerId || rawItem.id;
@@ -24,8 +40,9 @@ export default function Logistics() {
       return {
         cartItemId: rawItem.cartItemId || `${containerId}-${index}`,
         containerId,
-        origin: rawItem.origin || 'Shanghai (CNSHA)',
-        shipDate: rawItem.shipDate || new Date().toISOString().split('T')[0],
+        origin: rawItem.origin || searchParams.origin || 'Shanghai (CNSHA)',
+        destination: rawItem.destination || searchParams.destination || 'Los Angeles (USLAX)',
+        shipDate: rawItem.shipDate || searchParams.shipDate || new Date().toISOString().split('T')[0],
         ...catalogData,
       };
     })
@@ -45,9 +62,10 @@ export default function Logistics() {
       if (code.includes('(')) {
         const portName = code.split('(')[0].trim();
         const portCode = code.split('(')[1]?.replace(')', '').trim() || 'PORT';
-        return { port: portName, code: portCode, freight: 1350 };
+        const matched = defaultOrigins.find((o) => o.code.toLowerCase() === portCode.toLowerCase());
+        return matched || { port: portName, code: portCode, freight: 1350 };
       }
-      
+
       const found = defaultOrigins.find(
         (o) => o.code.toLowerCase() === code.toLowerCase() || o.port.toLowerCase().includes(code.toLowerCase())
       );
@@ -63,7 +81,37 @@ export default function Logistics() {
     return defaultOrigins[0];
   };
 
+  // Buscador de destino con soporte completo para puertos personalizados o venidos de LandingPage / Rates
+  const destinationOf = (code) => {
+    if (!code) return DEFAULT_DESTINATIONS[0];
+
+    if (typeof code === 'string' && code.trim() !== '') {
+      if (code.includes('(')) {
+        const portName = code.split('(')[0].trim();
+        const portCode = code.split('(')[1]?.replace(')', '').trim() || 'PORT';
+        return { port: portName, code: portCode };
+      }
+
+      const found = DEFAULT_DESTINATIONS.find(
+        (d) => d.code.toLowerCase() === code.toLowerCase() || d.port.toLowerCase().includes(code.toLowerCase())
+      );
+      if (found) return found;
+
+      return {
+        port: code.charAt(0).toUpperCase() + code.slice(1),
+        code: code.toUpperCase(),
+      };
+    }
+
+    return DEFAULT_DESTINATIONS[0];
+  };
+
   const setOrigin = (id, origin) => setCartOrigin(id, origin);
+  const setDestination = (id, destination) => {
+    if (typeof setCartDestination === 'function') {
+      setCartDestination(id, destination);
+    }
+  };
   const removeItem = (targetId) => removeFromCart(targetId);
 
   const merchandise = cart.reduce((sum, item) => sum + (item.unitCost || 0), 0);
@@ -78,7 +126,9 @@ export default function Logistics() {
   // Checkout Individual
   const handleSingleCheckout = (itemToProcess) => {
     const originObj = originOf(itemToProcess);
+    const destObj = destinationOf(itemToProcess.destination);
     const originLabel = `${originObj.port} (${originObj.code})`;
+    const destinationLabel = `${destObj.port} (${destObj.code})`;
     const newRef = generarReferencia();
 
     const processedItem = {
@@ -86,6 +136,8 @@ export default function Logistics() {
       orderRef: newRef,
       origin: originLabel,
       selectedOrigin: originLabel,
+      destination: destinationLabel,
+      selectedDestination: destinationLabel,
     };
 
     if (typeof setReservations === 'function') {
@@ -104,12 +156,16 @@ export default function Logistics() {
 
     const itemsToProcess = cart.map((item) => {
       const originObj = originOf(item);
+      const destObj = destinationOf(item.destination);
       const originLabel = `${originObj.port} (${originObj.code})`;
+      const destinationLabel = `${destObj.port} (${destObj.code})`;
       return {
         ...item,
         orderRef: newRef,
         origin: originLabel,
         selectedOrigin: originLabel,
+        destination: destinationLabel,
+        selectedDestination: destinationLabel,
       };
     });
 
@@ -151,14 +207,23 @@ export default function Logistics() {
 
           {cart.map((item) => {
             const originObj = originOf(item);
+            const destObj = destinationOf(item.destination);
+
             const baseOrigins = item.origins || [
               { port: 'Shanghai', code: 'CNSHA', freight: 1200 },
               { port: 'Rotterdam', code: 'NLRTM', freight: 1400 },
               { port: 'Los Angeles', code: 'USLAX', freight: 1300 },
             ];
 
-            const hasMatch = baseOrigins.some((o) => o.code === originObj.code || o.port.toLowerCase() === originObj.port.toLowerCase());
-            const originsList = hasMatch ? baseOrigins : [originObj, ...baseOrigins];
+            const hasOriginMatch = baseOrigins.some(
+              (o) => o.code === originObj.code || o.port.toLowerCase() === originObj.port.toLowerCase()
+            );
+            const originsList = hasOriginMatch ? baseOrigins : [originObj, ...baseOrigins];
+
+            const hasDestMatch = DEFAULT_DESTINATIONS.some(
+              (d) => d.code === destObj.code || d.port.toLowerCase() === destObj.port.toLowerCase()
+            );
+            const destinationsList = hasDestMatch ? DEFAULT_DESTINATIONS : [destObj, ...DEFAULT_DESTINATIONS];
 
             const itemTotal = (item.unitCost || 0) + (originObj.freight || 0);
 
@@ -181,7 +246,7 @@ export default function Logistics() {
                         aria-label={`Remove ${item.title}`}
                         className="pb-[3px] hover:opacity-60 transition-opacity shrink-0 text-red-600 flex items-center gap-1 text-xs font-mono"
                       >
-                        <Trash2 aria-hidden="true" className="size-5 text-[#44474c]"/>
+                        <Trash2 aria-hidden="true" className="size-5 text-[#44474c]" />
                       </button>
                     </div>
                     <div className="grid grid-cols-2 gap-[11px] font-mono font-medium">
@@ -196,28 +261,56 @@ export default function Logistics() {
                     </div>
                   </div>
 
-                  <div className="bg-[#f1f4f6] border border-[#c4c6cd] rounded-[3px] p-3 flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
-                    <div className="flex items-center gap-[11px] text-[19px]">
-                      <Route aria-hidden="true" className="size-4 shrink-0"/>
-                      <span>
-                        Origin: <strong className="font-bold">{originObj.port} ({originObj.code})</strong>
-                      </span>
+                  {/* Selector de Ruta: Origin & Destination */}
+                  <div className="bg-[#f1f4f6] border border-[#c4c6cd] rounded-[3px] p-3 flex flex-col gap-3">
+                    <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
+                      <div className="flex items-center gap-[11px] text-[19px]">
+                        <Route aria-hidden="true" className="size-4 shrink-0" />
+                        <span>
+                          Origin: <strong className="font-bold">{originObj.port} ({originObj.code})</strong>
+                        </span>
+                      </div>
+
+                      <div className="relative min-w-0 2xl:flex-1 2xl:max-w-[374px]">
+                        <select
+                          value={originObj.code}
+                          onChange={(e) => setOrigin(item.cartItemId, e.target.value)}
+                          aria-label={`Origin for ${item.title}`}
+                          className="appearance-none w-full bg-white border border-[#c4c6cd] rounded-[3px] pl-[18px] pr-[45px] py-[9px] font-mono font-medium text-[19px] cursor-pointer focus:outline-none focus:border-[#041627]"
+                        >
+                          {originsList.map((o) => (
+                            <option key={o.code} value={o.code}>
+                              {o.port} ({o.code})
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-5 text-[#6b7280]" />
+                      </div>
                     </div>
 
-                    <div className="relative min-w-0 2xl:flex-1 2xl:max-w-[374px]">
-                      <select
-                        value={originObj.code}
-                        onChange={(e) => setOrigin(item.cartItemId, e.target.value)}
-                        aria-label={`Origin for ${item.title}`}
-                        className="appearance-none w-full bg-white border border-[#c4c6cd] rounded-[3px] pl-[18px] pr-[45px] py-[9px] font-mono font-medium text-[19px] cursor-pointer focus:outline-none focus:border-[#041627]"
-                      >
-                        {originsList.map((o) => (
-                          <option key={o.code} value={o.code}>
-                            {o.port} ({o.code})
-                          </option>
-                        ))}
-                      </select>
-                      <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-5 text-[#6b7280]"/>
+                    <div className="border-t border-[#c4c6cd]/60 pt-3 flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
+                      <div className="flex items-center gap-[11px] text-[19px]">
+                        <Route aria-hidden="true" className="size-4 shrink-0 text-amber-600" />
+                        <span>
+                          Destination: <strong className="font-bold">{destObj.port} ({destObj.code})</strong>
+                        </span>
+                      </div>
+
+                      <div className="relative min-w-0 2xl:flex-1 2xl:max-w-[374px]">
+                        <select
+                          value={destObj.code}
+                          onChange={(e) => setDestination(item.cartItemId, e.target.value)}
+                          aria-label={`Destination for ${item.title}`}
+                          className="appearance-none w-full bg-white border border-[#c4c6cd] rounded-[3px] pl-[18px] pr-[45px] py-[9px] font-mono font-medium text-[19px] cursor-pointer focus:outline-none focus:border-[#041627]"
+                        >
+                          {destinationsList.map((d) => (
+                            <option key={d.code} value={d.code}>
+                              {d.port} ({d.code})
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-5 text-[#6b7280]" />
+                      </div>
                     </div>
                   </div>
 
@@ -272,7 +365,7 @@ export default function Logistics() {
             </div>
 
             <div className="bg-[#0b1d2d] rounded-[3px] p-4 flex gap-[11px] items-start text-[#b7c8de] text-[19px] leading-[26px]">
-              <Info aria-hidden="true" className="size-5 mt-[2px] shrink-0 text-brand-orange"/>
+              <Info aria-hidden="true" className="size-5 mt-[2px] shrink-0 text-brand-orange" />
               <p>
                 Puedes despachar contenedores individualmente en cada tarjeta o procesar la orden completa a continuación.
               </p>
@@ -290,7 +383,7 @@ export default function Logistics() {
         </aside>
       </main>
 
-      <Footer/>
+      <Footer />
     </div>
   );
 }

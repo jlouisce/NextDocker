@@ -25,6 +25,24 @@ export default function Profile() {
     return 'Origen no especificado';
   };
 
+  // Formateador de destino robusto sincronizado con el carrito y las reservas
+  const getDestinationLabel = (item) => {
+    if (!item) return 'Destino no especificado';
+
+    const rawDestination = item.destination || item.selectedDestination;
+    if (typeof rawDestination === 'string' && rawDestination.trim() !== '') {
+      return rawDestination;
+    }
+
+    if (typeof rawDestination === 'object' && rawDestination !== null) {
+      return rawDestination.port
+        ? `${rawDestination.port} (${rawDestination.code || ''})`
+        : (rawDestination.code || 'Destino no especificado');
+    }
+
+    return 'Destino no especificado';
+  };
+
   const getItemDetails = (item) => {
     const id = item.containerId || item.id;
     const cat = cartCatalog[id] || containersData?.find((c) => c.id === id) || {};
@@ -32,6 +50,7 @@ export default function Profile() {
       title: item.title || cat.title || 'Contenedor Estándar',
       price: item.unitCost || cat.unitCost || item.price || cat.price || 2100,
       origin: getOriginLabel(item),
+      destination: getDestinationLabel(item),
     };
   };
 
@@ -92,7 +111,12 @@ export default function Profile() {
                     <div key={idx} className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm flex justify-between items-center">
                       <div>
                         <h3 className="font-bold text-slate-900 text-lg">{details.title}</h3>
-                        <p className="text-sm text-slate-600 mt-0.5">Origen: <strong className="font-semibold">{details.origin}</strong></p>
+                        <p className="text-sm text-slate-600 mt-0.5">
+                          Origen: <strong className="font-semibold">{details.origin}</strong>
+                        </p>
+                        <p className="text-sm text-slate-600">
+                          Destino: <strong className="font-semibold">{details.destination}</strong>
+                        </p>
                         <p className="text-amber-600 font-bold font-mono text-base mt-1">{money(details.price)}</p>
                       </div>
 
@@ -134,7 +158,7 @@ export default function Profile() {
                   return (
                     <div 
                       key={idx} 
-                      className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-lg p-4 shadow-sm flex flex-col gap-2"
+                      className="bg-[#f0fdf4] border border-[#bbf7d0] rounded-lg p-4 shadow-sm flex flex-col gap-1.5"
                     >
                       <div className="flex justify-between items-start">
                         <h3 className="font-bold text-[#166534] text-lg">{details.title}</h3>
@@ -144,8 +168,13 @@ export default function Profile() {
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-[#15803d]">Origen: <strong className="font-semibold">{details.origin}</strong></p>
-                      <p className="text-[#166534] font-bold font-mono text-base">{money(details.price)}</p>
+                      <p className="text-sm text-[#15803d]">
+                        Origen: <strong className="font-semibold">{details.origin}</strong>
+                      </p>
+                      <p className="text-sm text-[#15803d]">
+                        Destino: <strong className="font-semibold">{details.destination}</strong>
+                      </p>
+                      <p className="text-[#166534] font-bold font-mono text-base mt-0.5">{money(details.price)}</p>
                       <div className="mt-1">
                         <span className="inline-block text-[10px] font-mono font-bold uppercase bg-[#dcfce7] text-[#15803d] px-2 py-1 rounded border border-[#86efac]">
                           ORDEN PROCESADA

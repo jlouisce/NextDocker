@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, Route, Clock, Calendar, RotateCcw, CheckCircle2, X } from 'lucide-react';
 import Footer from '../components/Footer';
@@ -25,6 +25,16 @@ const SORTS = [
 const unique = (list) => [...new Set(list)];
 const days = (text) => parseInt(text, 10) || 0;
 const money = (n) => `$${n.toLocaleString('en-US')}`;
+
+// Empareja texto libre venido de LandingPage (ej. "Los Angeles" o "USLAX") con las opciones del select
+const resolvePortOption = (paramValue, availablePorts) => {
+  if (!paramValue || paramValue === ALL) return ALL;
+  const clean = paramValue.trim().toLowerCase();
+  const exact = availablePorts.find((p) => p.toLowerCase() === clean);
+  if (exact) return exact;
+  const partial = availablePorts.find((p) => p.toLowerCase().includes(clean));
+  return partial || paramValue;
+};
 
 // Fecha de llegada estimada = fecha de envío + días de tránsito
 const arrivalDate = (shipDate, transit) => {
@@ -53,26 +63,55 @@ const selectClass =
 const labelClass = 'text-xs font-mono text-gray-400 uppercase tracking-wider';
 
 export default function Rates() {
-  const { searchParams, updateSearchParams, addToCart } = useApp();
+  const { searchParams = {}, updateSearchParams, addToCart } = useApp();
 
-  // Filtros: se aplican al instante, sin botón de búsqueda
-  const [origin, setOrigin] = useState(searchParams.origin || ALL);
-  const [destination, setDestination] = useState(ALL);
-  const [equipment, setEquipment] = useState(ALL);
-  const [shipDate, setShipDate] = useState(searchParams.shipDate);
+  const origins = unique(lanesData.map((l) => l.origin));
+  const destinations = unique(lanesData.map((l) => l.destination));
+
+  // Filtros: se aplican al instante y se inicializan desde el contexto global
+  const [origin, setOrigin] = useState(() => resolvePortOption(searchParams.origin, origins));
+  const [destination, setDestination] = useState(() => resolvePortOption(searchParams.destination, destinations));
+  const [equipment, setEquipment] = useState(
+    searchParams.containerType && EQUIPMENT[searchParams.containerType] ? searchParams.containerType : ALL
+  );
+  const [shipDate, setShipDate] = useState(searchParams.shipDate || new Date().toISOString().split('T')[0]);
   const [sortBy, setSortBy] = useState('price');
 
   const [selectedLane, setSelectedLane] = useState(null);
   const [booked, setBooked] = useState(null); // aviso tras agregar al carrito
 
-  const origins = unique(lanesData.map((l) => l.origin));
-  const destinations = unique(lanesData.map((l) => l.destination));
-  const eq = EQUIPMENT[equipment];
+  // Sincroniza automáticamente si searchParams cambia desde LandingPage u otra vista
+  useEffect(() => {
+    setOrigin(resolvePortOption(searchParams.origin, origins));
+    setDestination(resolvePortOption(searchParams.destination, destinations));
+    if (searchParams.containerType && EQUIPMENT[searchParams.containerType]) {
+      setEquipment(searchParams.containerType);
+    }
+    if (searchParams.shipDate) {
+      setShipDate(searchParams.shipDate);
+    }
+  }, [searchParams.origin, searchParams.destination, searchParams.containerType, searchParams.shipDate]);
+
+  // Asegura que un puerto escrito manualmente en LandingPage también aparezca visible en el select
+  const originOptions = origin !== ALL && !origins.includes(origin) ? [origin, ...origins] : origins;
+  const destinationOptions =
+    destination !== ALL && !destinations.includes(destination) ? [destination, ...destinations] : destinations;
+
+  const eq = EQUIPMENT[equipment] || EQUIPMENT[ALL];
 
   const changeOrigin = (value) => {
     setOrigin(value);
-    // El origen se comparte con el resto de la app (landing, detalle)
     if (value !== ALL) updateSearchParams({ origin: value });
+  };
+
+  const changeDestination = (value) => {
+    setDestination(value);
+    if (value !== ALL) updateSearchParams({ destination: value });
+  };
+
+  const changeEquipment = (value) => {
+    setEquipment(value);
+    updateSearchParams({ containerType: value });
   };
 
   const changeDate = (value) => {
@@ -90,7 +129,13 @@ export default function Rates() {
   // Tarifas ya ajustadas al tipo de equipo, filtradas y ordenadas
   const lanes = lanesData
     .map((lane) => ({ ...lane, rate: Math.round(lane.rate * eq.mult) }))
-    .filter((l) => (origin === ALL || l.origin === origin) && (destination === ALL || l.destination === destination))
+    .filter((l) => {
+      const matchOrigin =
+        origin === ALL || l.origin.toLowerCase().includes(origin.trim().toLowerCase());
+      const matchDestination =
+        destination === ALL || l.destination.toLowerCase().includes(destination.trim().toLowerCase());
+      return matchOrigin && matchDestination;
+    })
     .sort((a, b) => {
       if (sortBy === 'price') return a.rate - b.rate;
       if (sortBy === 'transit') return days(a.transitTime) - days(b.transitTime);
@@ -102,7 +147,7 @@ export default function Rates() {
   const avgRate = lanes.length ? Math.round(lanes.reduce((s, l) => s + l.rate, 0) / lanes.length) : 0;
 
   const bookLane = (lane) => {
-    addToCart(eq.containerId, lane.origin, shipDate);
+    addToCart(eq.containerId, lane.origin, shipDate, lane.destination);
     setBooked(lane);
     setSelectedLane(null);
   };
@@ -127,7 +172,7 @@ export default function Rates() {
               <div className="relative">
                 <select id="rates-origin" value={origin} onChange={(e) => changeOrigin(e.target.value)} className={selectClass}>
                   <option value={ALL}>All origins</option>
-                  {origins.map((o) => (
+                  {originOptions.map((o) => (
                     <option key={o} value={o}>{o}</option>
                   ))}
                 </select>
@@ -138,9 +183,9 @@ export default function Rates() {
             <div className="flex flex-col gap-1">
               <label htmlFor="rates-destination" className={labelClass}>Destination Port</label>
               <div className="relative">
-                <select id="rates-destination" value={destination} onChange={(e) => setDestination(e.target.value)} className={selectClass}>
+                <select id="rates-destination" value={destination} onChange={(e) => changeDestination(e.target.value)} className={selectClass}>
                   <option value={ALL}>All destinations</option>
-                  {destinations.map((d) => (
+                  {destinationOptions.map((d) => (
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
@@ -151,7 +196,7 @@ export default function Rates() {
             <div className="flex flex-col gap-1">
               <label htmlFor="rates-equipment" className={labelClass}>Equipment Type</label>
               <div className="relative">
-                <select id="rates-equipment" value={equipment} onChange={(e) => setEquipment(e.target.value)} className={selectClass}>
+                <select id="rates-equipment" value={equipment} onChange={(e) => changeEquipment(e.target.value)} className={selectClass}>
                   {Object.entries(EQUIPMENT).map(([id, e]) => (
                     <option key={id} value={id}>{e.label}</option>
                   ))}
@@ -196,7 +241,7 @@ export default function Rates() {
               <h2 className="text-xl font-bold text-[#041627]">Available Lanes</h2>
               <p className="text-xs text-[#74777d] font-mono mt-0.5">
                 {lanes.length} {lanes.length === 1 ? 'result' : 'results'}
-                {lanes.length > 0 && <> • average {money(avgRate)} USD</>} • {eq.label}
+                {lanes.length > 0 && <> · average {money(avgRate)} USD</>} · {eq.label}
               </p>
             </div>
 
@@ -309,7 +354,7 @@ export default function Rates() {
           <section className="flex flex-col gap-3 max-w-xl">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-mono font-bold uppercase text-[#44474c]">
-                {selectedLane.carrier} • {selectedLane.code}
+                {selectedLane.carrier} · {selectedLane.code}
               </h2>
               <button
                 type="button"

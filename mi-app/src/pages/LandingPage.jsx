@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, MapPin, Calendar, Filter, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
@@ -23,20 +23,38 @@ export default function LandingPage() {
 
   // Estados locales de los campos
   const [originInput, setOriginInput] = useState(searchParams.origin || 'Shanghai (CNSHA)');
+  const [destinationInput, setDestinationInput] = useState(searchParams.destination || 'Los Angeles (USLAX)');
   const [typeSelect, setTypeSelect] = useState(searchParams.containerType || 'all');
   const [dateInput, setDateInput] = useState(searchParams.shipDate || new Date().toISOString().split('T')[0]);
 
   // Filtros aplicados al presionar SEARCH FLEET
   const [appliedFilters, setAppliedFilters] = useState({
     origin: searchParams.origin || 'Shanghai (CNSHA)',
+    destination: searchParams.destination || 'Los Angeles (USLAX)',
     containerType: searchParams.containerType || 'all',
     shipDate: searchParams.shipDate || new Date().toISOString().split('T')[0],
   });
+
+  // Sincroniza automáticamente si searchParams cambia desde otra página (Rates, Logistics, etc.)
+  useEffect(() => {
+    setOriginInput(searchParams.origin || 'Shanghai (CNSHA)');
+    setDestinationInput(searchParams.destination || 'Los Angeles (USLAX)');
+    setTypeSelect(searchParams.containerType || 'all');
+    setDateInput(searchParams.shipDate || new Date().toISOString().split('T')[0]);
+
+    setAppliedFilters({
+      origin: searchParams.origin || 'Shanghai (CNSHA)',
+      destination: searchParams.destination || 'Los Angeles (USLAX)',
+      containerType: searchParams.containerType || 'all',
+      shipDate: searchParams.shipDate || new Date().toISOString().split('T')[0],
+    });
+  }, [searchParams.origin, searchParams.destination, searchParams.containerType, searchParams.shipDate]);
 
   const handleSearch = (e) => {
     if (e) e.preventDefault();
     const newFilters = {
       origin: originInput,
+      destination: destinationInput,
       containerType: typeSelect,
       shipDate: dateInput,
     };
@@ -88,7 +106,7 @@ export default function LandingPage() {
           <div className="bg-white text-slate-900 border border-slate-200/80 rounded-lg p-6 shadow-xl text-left">
             <form
               onSubmit={handleSearch}
-              className="grid grid-cols-1 md:grid-cols-4 gap-5 items-end"
+              className="grid grid-cols-1 md:grid-cols-5 gap-5 items-end"
             >
               {/* 1. Origin Port */}
               <div className="flex flex-col">
@@ -107,7 +125,24 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* 2. Container Type */}
+              {/* 2. Destination Port */}
+              <div className="flex flex-col">
+                <label className="text-[11px] font-mono font-semibold tracking-wider text-slate-500 uppercase mb-2">
+                  Destination Port
+                </label>
+                <div className="relative w-full">
+                  <MapPin className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-700" />
+                  <input
+                    type="text"
+                    value={destinationInput}
+                    onChange={(e) => setDestinationInput(e.target.value)}
+                    placeholder="e.g. Los Angeles (USLAX)"
+                    className="w-full h-12 bg-[#f8fafc] border border-slate-300 rounded-[4px] pl-10 pr-3.5 text-sm font-medium text-slate-900 placeholder-slate-400 focus:outline-none focus:border-amber-500 focus:bg-white transition"
+                  />
+                </div>
+              </div>
+
+              {/* 3. Container Type */}
               <div className="flex flex-col">
                 <label className="text-[11px] font-mono font-semibold tracking-wider text-slate-500 uppercase mb-2">
                   Equipment Type
@@ -128,7 +163,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* 3. Shipment Date */}
+              {/* 4. Shipment Date */}
               <div className="flex flex-col">
                 <label className="text-[11px] font-mono font-semibold tracking-wider text-slate-500 uppercase mb-2">
                   Shipment Date
@@ -144,7 +179,7 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              {/* 4. Botón Search Fleet */}
+              {/* 5. Botón Search Fleet */}
               <div>
                 <button
                   type="submit"
@@ -165,7 +200,9 @@ export default function LandingPage() {
           <div>
             <h2 className="text-2xl font-bold text-slate-900">Available Equipment</h2>
             <p className="text-xs font-mono text-slate-500 mt-1">
-              Location: <span className="font-bold text-amber-600">{appliedFilters.origin}</span> | Date: <span className="font-bold text-slate-700">{appliedFilters.shipDate}</span>
+              Route: <span className="font-bold text-amber-600">{appliedFilters.origin}</span> →{' '}
+              <span className="font-bold text-amber-600">{appliedFilters.destination}</span> | Date:{' '}
+              <span className="font-bold text-slate-700">{appliedFilters.shipDate}</span>
             </p>
           </div>
           <span className="text-sm font-mono text-slate-500 font-medium">
@@ -212,7 +249,9 @@ export default function LandingPage() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => addToCart(item.id, appliedFilters.origin, appliedFilters.shipDate)}
+                    onClick={() =>
+                      addToCart(item.id, appliedFilters.origin, appliedFilters.shipDate, appliedFilters.destination)
+                    }
                     className="bg-[#f5a623] hover:bg-[#e0951a] text-slate-900 text-xs font-mono font-bold px-4 py-2.5 rounded transition"
                   >
                     ADD TO CART
