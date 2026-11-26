@@ -1,18 +1,17 @@
 import { useState } from 'react';
-import { ChevronDown, Flag, LogOut, MapPin, Receipt, Search, Ship, ShoppingCart, TrendingDown, Waves, Zap } from 'lucide-react';
+import { ChevronDown, Flag, LogOut, MapPin, Receipt, Search, Ship, ShoppingCart, TrendingDown, User, Waves, Zap } from 'lucide-react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { getSession, logoutUser } from '../../utils/auth';
 import Footer from '../../components/Footer';
 import { useApp } from '../../context/AppContext';
 import { dashboardEquipment as equipmentOptions, dashboardLanes as lanesData } from '../../data/mockData';
-//import heroOverlay from '../../assets/figma/dash-hero-overlay.jpg';
+
 const heroOverlay = "/assets/figma/dash-hero-overlay.jpg";
 
 const carrierIcons = { oceania: Waves, pacific: Ship, express: Zap };
 const money = (value) => `$${value.toLocaleString('en-US')}`;
 const sum = (rows) => rows.reduce((total, [, amount]) => total + amount, 0);
 
-// Código corto de puerto: "Shanghai (CNSHA)" -> "SHA"
 const portCode = (text) => {
   const inParens = text.match(/\(([A-Za-z]{3,5})\)/);
   return (inParens ? inParens[1].slice(-3) : text.trim().slice(0, 3)).toUpperCase();
@@ -30,13 +29,13 @@ const field =
   'w-full bg-[#f7fafc] border border-[#c4c6cd] rounded-[4px] py-2.5 text-sm text-[#181c1e] focus:outline-none focus:border-[#041627]';
 const card = 'bg-white border border-[#c4c6cd] shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06)]';
 
-// Dashboard protegido: sin sesión (simulada) se redirige al login.
 export default function Dashboard() {
-  if (!getSession()) return <Navigate to="/dashboard/login" replace />;
-  return <DashboardContent />;
+  const session = getSession();
+  if (!session) return <Navigate to="/dashboard/login" replace />;
+  return <DashboardContent session={session} />;
 }
 
-function DashboardContent() {
+function DashboardContent({ session }) {
   const navigate = useNavigate();
   const { addToCart, cart = [] } = useApp();
   const [form, setForm] = useState({ origin: 'Shanghai (CNSHA)', destination: 'Los Angeles (USLAX)', equipment: '40ft-hc' });
@@ -58,15 +57,13 @@ function DashboardContent() {
   };
 
   const handleBook = (laneId) => {
-    addToCart(query.equipment);
+    addToCart(query.equipment, query.origin, undefined, query.destination);
     setSelectedLane(laneId);
     navigate('/logistics');
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f3f3f3] text-[#181c1e] font-sans">
-      {/* Header propio del dashboard */}
-      {/* Misma estructura que el Navbar principal: logo + enlaces a la izquierda, acciones a la derecha */}
       <header className="bg-[#0e1a33] sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between">
           <div className="flex items-center space-x-3 sm:space-x-8">
@@ -81,10 +78,10 @@ function DashboardContent() {
             </nav>
           </div>
 
-          <div className="flex items-center space-x-1 sm:space-x-3 shrink-0 text-[#f0f0f0]">
+          <div className="flex items-center space-x-1.5 sm:space-x-3 shrink-0 text-[#f0f0f0]">
             <Link
-              to="/profile"
-              aria-label="Profile and cart"
+              to="/logistics"
+              aria-label="Logistics cart"
               className="relative p-1.5 sm:p-2 hover:bg-white/10 rounded-full transition-colors"
             >
               <ShoppingCart className="h-5 w-5" />
@@ -94,6 +91,22 @@ function DashboardContent() {
                 </span>
               )}
             </Link>
+
+            <Link
+              to="/profile"
+              aria-label="Account profile"
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 transition-colors"
+            >
+              {session.avatar ? (
+                <img src={session.avatar} alt={session.name} className="h-5 w-5 rounded-full object-cover" />
+              ) : (
+                <User className="h-4 w-4 shrink-0" />
+              )}
+              <span className="hidden sm:inline text-xs font-semibold max-w-[110px] truncate text-white">
+                {session.name || session.email}
+              </span>
+            </Link>
+
             <button
               type="button"
               aria-label="Sign out"
@@ -106,6 +119,7 @@ function DashboardContent() {
             >
               <LogOut className="h-5 w-5" />
             </button>
+
             <Link
               to="/marketplace"
               className="bg-brand-orange hover:brightness-95 transition rounded-[9px] px-3 h-8 sm:h-9 inline-flex items-center text-xs sm:text-sm font-semibold text-[#222] whitespace-nowrap"
@@ -117,7 +131,6 @@ function DashboardContent() {
       </header>
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-5">
-        {/* Hero + buscador */}
         <section className={`${card} overflow-hidden`}>
           <div className="relative px-6 py-6 bg-[#041627]">
             <div className="absolute inset-0 bg-cover bg-center opacity-60 mix-blend-overlay" style={{ backgroundImage: `url("${heroOverlay}")` }} />
@@ -167,7 +180,6 @@ function DashboardContent() {
         </section>
 
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-          {/* Comparador de tarifas */}
           <section className="xl:col-span-8 flex flex-col gap-4">
             <div className="border-b border-[#c4c6cd] pb-[9px] flex items-center justify-between gap-4">
               <h2 className="text-lg font-semibold leading-7">
@@ -246,7 +258,6 @@ function DashboardContent() {
             })}
           </section>
 
-          {/* Barra lateral */}
           <aside className="xl:col-span-4 flex flex-col gap-5">
             <div className={`${card} p-4 flex flex-col gap-3`}>
               <h3 className="flex items-center gap-2 text-base font-semibold leading-6">

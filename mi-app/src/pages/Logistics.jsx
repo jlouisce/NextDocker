@@ -8,7 +8,6 @@ import { cartCatalog } from '../data/mockData';
 const money = (value) => `$${(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const moneyShort = (value) => `$${(value || 0).toLocaleString('en-US')}`;
 
-// Genera una referencia de reserva aleatoria (ej. RES-123456)
 const generarReferencia = () => `RES-${Math.floor(100000 + Math.random() * 900000)}`;
 
 const DEFAULT_DESTINATIONS = [
@@ -32,7 +31,6 @@ export default function Logistics() {
     searchParams = {},
   } = useApp();
 
-  // Mapeo defensivo de elementos en el carrito manteniendo cartItemId, origen y destino dinámico
   const cart = cartState
     .map((rawItem, index) => {
       const containerId = rawItem.containerId || rawItem.id;
@@ -48,7 +46,6 @@ export default function Logistics() {
     })
     .filter((item) => item.title || item.unitCost);
 
-  // Buscador de origen con soporte completo para puertos personalizados (ej. Cali, Los Ángeles, Rotterdam, etc.)
   const originOf = (item, code = item.origin) => {
     const defaultOrigins = item?.origins || [
       { port: 'Shanghai', code: 'CNSHA', freight: 1200 },
@@ -81,7 +78,6 @@ export default function Logistics() {
     return defaultOrigins[0];
   };
 
-  // Buscador de destino con soporte completo para puertos personalizados o venidos de LandingPage / Rates
   const destinationOf = (code) => {
     if (!code) return DEFAULT_DESTINATIONS[0];
 
@@ -123,7 +119,6 @@ export default function Logistics() {
   }, 0);
   const total = merchandise + freight;
 
-  // Checkout Individual
   const handleSingleCheckout = (itemToProcess) => {
     const originObj = originOf(itemToProcess);
     const destObj = destinationOf(itemToProcess.destination);
@@ -148,7 +143,6 @@ export default function Logistics() {
     setOrderRef(newRef);
   };
 
-  // Checkout Global (Todos)
   const handleCheckoutAll = () => {
     if (cart.length === 0) return;
 
@@ -179,12 +173,11 @@ export default function Logistics() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f7fafc] text-[#041627] font-sans">
-      <main className="flex-1 w-full max-w-[1728px] mx-auto px-6 lg:px-[54px] py-8 lg:py-[43px] flex flex-col lg:flex-row gap-8 lg:gap-[43px] items-start">
-
-        <section className="flex-1 min-w-0 w-full flex flex-col gap-[22px]">
-          <div className="border-b border-[#c4c6cd] pb-3">
-            <h1 className="text-[32px] font-semibold leading-[43px]">Smart Cart</h1>
-            <p className="text-lg lg:text-[19px] text-[#44474c] mt-1">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 flex flex-col lg:flex-row gap-8 items-start">
+        <section className="flex-1 min-w-0 w-full flex flex-col gap-6">
+          <div className="border-b border-[#c4c6cd] pb-4">
+            <h1 className="text-2xl sm:text-3xl font-bold text-[#041627]">Smart Cart</h1>
+            <p className="text-sm sm:text-base text-[#44474c] mt-1">
               {cart.length} {cart.length === 1 ? 'Container' : 'Containers'} selected for dispatch.
             </p>
           </div>
@@ -194,7 +187,9 @@ export default function Logistics() {
               {orderRef ? (
                 <>
                   <p className="text-2xl font-semibold text-[#041627]">Order placed successfully!</p>
-                  <p>Your reference is <span className="font-mono font-bold text-[#041627]">{orderRef}</span>. Check your profile order history for details.</p>
+                  <p>
+                    Your reference is <span className="font-mono font-bold text-[#041627]">{orderRef}</span>. Check your profile order history for details.
+                  </p>
                 </>
               ) : (
                 <p>Your cart is empty.</p>
@@ -230,53 +225,53 @@ export default function Logistics() {
             return (
               <article
                 key={item.cartItemId}
-                className="bg-white border border-[#c4c6cd] rounded-[5px] p-[23px] flex flex-col md:flex-row gap-[22px] shadow-[0_5px_8px_-1px_rgba(0,0,0,0.1),0_3px_5px_-1px_rgba(0,0,0,0.06)]"
+                className="bg-white border border-[#c4c6cd] rounded-[5px] p-5 flex flex-col md:flex-row gap-5 shadow-[0_5px_8px_-1px_rgba(0,0,0,0.1),0_3px_5px_-1px_rgba(0,0,0,0.06)]"
               >
-                <div className="bg-[#ebeef0] h-[173px] w-full md:w-[259px] shrink-0 rounded-[3px] overflow-hidden">
+                <div className="bg-[#ebeef0] h-40 w-full md:w-56 shrink-0 rounded-[3px] overflow-hidden">
                   <img src={item.image} alt={item.title} className="size-full object-cover" />
                 </div>
 
                 <div className="flex-1 min-w-0 flex flex-col justify-between gap-4">
-                  <div className="flex flex-col gap-[11px] pb-2">
+                  <div className="flex flex-col gap-2">
                     <div className="flex items-start justify-between gap-4">
-                      <h2 className="text-xl lg:text-[27px] font-semibold leading-[38px]">{item.title}</h2>
+                      <h2 className="text-lg sm:text-xl font-semibold text-[#041627]">{item.title}</h2>
                       <button
                         type="button"
                         onClick={() => removeItem(item.cartItemId)}
                         aria-label={`Remove ${item.title}`}
-                        className="pb-[3px] hover:opacity-60 transition-opacity shrink-0 text-red-600 flex items-center gap-1 text-xs font-mono"
+                        className="p-1 hover:opacity-60 transition-opacity shrink-0 cursor-pointer"
                       >
                         <Trash2 aria-hidden="true" className="size-5 text-[#44474c]" />
                       </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-[11px] font-mono font-medium">
+                    <div className="grid grid-cols-2 gap-3 font-mono font-medium">
                       <div>
-                        <div className="text-base text-[#74777d] uppercase leading-[22px]">SKU</div>
-                        <div className="text-[19px] text-[#44474c] leading-[27px]">{item.sku}</div>
+                        <div className="text-xs text-[#74777d] uppercase">SKU</div>
+                        <div className="text-sm text-[#44474c]">{item.sku}</div>
                       </div>
                       <div>
-                        <div className="text-base text-[#74777d] uppercase leading-[22px]">Payload</div>
-                        <div className="text-[19px] text-[#44474c] leading-[27px]">{item.payload}</div>
+                        <div className="text-xs text-[#74777d] uppercase">Payload</div>
+                        <div className="text-sm text-[#44474c]">{item.payload}</div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Selector de Ruta: Origin & Destination */}
+                  {/* Route Selector: Origin & Destination */}
                   <div className="bg-[#f1f4f6] border border-[#c4c6cd] rounded-[3px] p-3 flex flex-col gap-3">
-                    <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
-                      <div className="flex items-center gap-[11px] text-[19px]">
+                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-sm">
                         <Route aria-hidden="true" className="size-4 shrink-0" />
                         <span>
                           Origin: <strong className="font-bold">{originObj.port} ({originObj.code})</strong>
                         </span>
                       </div>
 
-                      <div className="relative min-w-0 2xl:flex-1 2xl:max-w-[374px]">
+                      <div className="relative min-w-0 xl:w-64">
                         <select
                           value={originObj.code}
                           onChange={(e) => setOrigin(item.cartItemId, e.target.value)}
                           aria-label={`Origin for ${item.title}`}
-                          className="appearance-none w-full bg-white border border-[#c4c6cd] rounded-[3px] pl-[18px] pr-[45px] py-[9px] font-mono font-medium text-[19px] cursor-pointer focus:outline-none focus:border-[#041627]"
+                          className="appearance-none w-full bg-white border border-[#c4c6cd] rounded-[3px] pl-3 pr-9 py-2 font-mono font-medium text-sm cursor-pointer focus:outline-none focus:border-[#041627]"
                         >
                           {originsList.map((o) => (
                             <option key={o.code} value={o.code}>
@@ -284,24 +279,24 @@ export default function Logistics() {
                             </option>
                           ))}
                         </select>
-                        <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-5 text-[#6b7280]" />
+                        <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-4 text-[#6b7280]" />
                       </div>
                     </div>
 
-                    <div className="border-t border-[#c4c6cd]/60 pt-3 flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-3">
-                      <div className="flex items-center gap-[11px] text-[19px]">
+                    <div className="border-t border-[#c4c6cd]/60 pt-3 flex flex-col xl:flex-row xl:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-sm">
                         <Route aria-hidden="true" className="size-4 shrink-0 text-amber-600" />
                         <span>
                           Destination: <strong className="font-bold">{destObj.port} ({destObj.code})</strong>
                         </span>
                       </div>
 
-                      <div className="relative min-w-0 2xl:flex-1 2xl:max-w-[374px]">
+                      <div className="relative min-w-0 xl:w-64">
                         <select
                           value={destObj.code}
                           onChange={(e) => setDestination(item.cartItemId, e.target.value)}
                           aria-label={`Destination for ${item.title}`}
-                          className="appearance-none w-full bg-white border border-[#c4c6cd] rounded-[3px] pl-[18px] pr-[45px] py-[9px] font-mono font-medium text-[19px] cursor-pointer focus:outline-none focus:border-[#041627]"
+                          className="appearance-none w-full bg-white border border-[#c4c6cd] rounded-[3px] pl-3 pr-9 py-2 font-mono font-medium text-sm cursor-pointer focus:outline-none focus:border-[#041627]"
                         >
                           {destinationsList.map((d) => (
                             <option key={d.code} value={d.code}>
@@ -309,31 +304,31 @@ export default function Logistics() {
                             </option>
                           ))}
                         </select>
-                        <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-5 text-[#6b7280]" />
+                        <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-4 text-[#6b7280]" />
                       </div>
                     </div>
                   </div>
 
-                  <div className="pt-2 flex justify-end">
+                  <div className="pt-1 flex justify-end">
                     <button
                       type="button"
                       onClick={() => handleSingleCheckout(item)}
-                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-mono font-bold text-xs px-4 py-2.5 rounded flex items-center gap-2 transition"
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-mono font-bold text-xs uppercase px-4 py-2.5 rounded flex items-center gap-2 transition cursor-pointer"
                     >
                       <CheckCircle className="w-4 h-4" />
-                      DESPACHAR SOLO ESTE CONTENEDOR ({moneyShort(itemTotal)})
+                      Dispatch This Container ({moneyShort(itemTotal)})
                     </button>
                   </div>
                 </div>
 
-                <div className="md:border-l border-[#c4c6cd] md:w-[173px] shrink-0 md:pl-[23px] flex md:flex-col justify-between items-end gap-4 text-right">
+                <div className="md:border-l border-[#c4c6cd] md:w-36 shrink-0 md:pl-5 flex md:flex-col justify-between items-end gap-4 text-right">
                   <div>
-                    <div className="font-mono font-bold text-base text-[#74777d] tracking-[0.05em] leading-[22px]">UNIT COST</div>
-                    <div className="font-mono font-bold text-[19px] leading-[27px]">{moneyShort(item.unitCost)}</div>
+                    <div className="font-mono font-bold text-xs text-[#74777d] tracking-[0.05em]">UNIT COST</div>
+                    <div className="font-mono font-bold text-base">{moneyShort(item.unitCost)}</div>
                   </div>
                   <div>
-                    <div className="font-mono font-bold text-base text-[#74777d] tracking-[0.05em] leading-[22px]">FREIGHT</div>
-                    <div className="font-mono font-medium text-[19px] leading-[27px]">{moneyShort(originObj.freight)}</div>
+                    <div className="font-mono font-bold text-xs text-[#74777d] tracking-[0.05em]">FREIGHT</div>
+                    <div className="font-mono font-medium text-base">{moneyShort(originObj.freight)}</div>
                   </div>
                 </div>
               </article>
@@ -341,11 +336,11 @@ export default function Logistics() {
           })}
         </section>
 
-        <aside className="w-full lg:w-[432px] shrink-0">
-          <div className="bg-[#041627] text-white rounded-[5px] p-[22px] flex flex-col gap-[22px]">
-            <h2 className="text-[27px] font-semibold leading-[38px] border-b border-[#38485a] pb-3">Order Summary</h2>
+        <aside className="w-full lg:w-[380px] shrink-0">
+          <div className="bg-[#041627] text-white rounded-[5px] p-6 flex flex-col gap-5">
+            <h2 className="text-xl font-semibold border-b border-[#38485a] pb-3">Order Summary</h2>
 
-            <div className="flex flex-col gap-4 pb-[22px] font-mono font-medium text-[19px] leading-[27px]">
+            <div className="flex flex-col gap-3 pb-4 font-mono font-medium text-sm">
               <div className="flex justify-between gap-4">
                 <span className="text-[#8192a7]">Total Merchandise</span>
                 <span>{money(merchandise)}</span>
@@ -358,16 +353,16 @@ export default function Logistics() {
                 <span>Origin Optimization Savings</span>
                 <span>-{money(savings)}</span>
               </div>
-              <div className="flex justify-between gap-4 border-t border-[#38485a] pt-[18px] font-bold text-[24px] leading-[38px]">
+              <div className="flex justify-between gap-4 border-t border-[#38485a] pt-4 font-bold text-lg">
                 <span>Total (USD)</span>
                 <span>{money(total)}</span>
               </div>
             </div>
 
-            <div className="bg-[#0b1d2d] rounded-[3px] p-4 flex gap-[11px] items-start text-[#b7c8de] text-[19px] leading-[26px]">
-              <Info aria-hidden="true" className="size-5 mt-[2px] shrink-0 text-brand-orange" />
+            <div className="bg-[#0b1d2d] rounded-[3px] p-3.5 flex gap-3 items-start text-[#b7c8de] text-xs leading-5">
+              <Info aria-hidden="true" className="size-4 mt-0.5 shrink-0 text-brand-orange" />
               <p>
-                Puedes despachar contenedores individualmente en cada tarjeta o procesar la orden completa a continuación.
+                You can dispatch containers individually on each card or process the entire order below.
               </p>
             </div>
 
@@ -375,7 +370,7 @@ export default function Logistics() {
               type="button"
               onClick={handleCheckoutAll}
               disabled={cart.length === 0}
-              className="bg-brand-orange hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed text-[#181c1e] font-mono font-bold text-base tracking-[0.05em] py-4 rounded-[3px] transition"
+              className="bg-brand-orange hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed text-[#181c1e] font-mono font-bold text-sm tracking-[0.05em] py-3.5 rounded-[3px] transition cursor-pointer"
             >
               PROCEED TO CHECKOUT (ALL)
             </button>

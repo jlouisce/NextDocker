@@ -8,7 +8,6 @@ import { lanesData } from '../data/mockData';
 
 const ALL = 'all';
 
-// Tipos de equipo: id de contenedor del carrito y multiplicador de tarifa sobre la base (40' HC)
 const EQUIPMENT = {
   [ALL]: { label: 'All Equipment Types', containerId: '40ft-hc', mult: 1 },
   '20ft': { label: "20' Standard Steel", containerId: '20ft-standard', mult: 0.75 },
@@ -26,7 +25,6 @@ const unique = (list) => [...new Set(list)];
 const days = (text) => parseInt(text, 10) || 0;
 const money = (n) => `$${n.toLocaleString('en-US')}`;
 
-// Empareja texto libre venido de LandingPage (ej. "Los Angeles" o "USLAX") con las opciones del select
 const resolvePortOption = (paramValue, availablePorts) => {
   if (!paramValue || paramValue === ALL) return ALL;
   const clean = paramValue.trim().toLowerCase();
@@ -36,7 +34,6 @@ const resolvePortOption = (paramValue, availablePorts) => {
   return partial || paramValue;
 };
 
-// Fecha de llegada estimada = fecha de envío + días de tránsito
 const arrivalDate = (shipDate, transit) => {
   const d = new Date(`${shipDate}T00:00:00`);
   if (Number.isNaN(d.getTime())) return '—';
@@ -44,7 +41,6 @@ const arrivalDate = (shipDate, transit) => {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
-// Desglose estimado de una tarifa (porcentajes fijos sobre el total)
 const buildBreakdown = (rate) => {
   const docs = 50;
   const net = rate - docs;
@@ -68,7 +64,6 @@ export default function Rates() {
   const origins = unique(lanesData.map((l) => l.origin));
   const destinations = unique(lanesData.map((l) => l.destination));
 
-  // Filtros: se aplican al instante y se inicializan desde el contexto global
   const [origin, setOrigin] = useState(() => resolvePortOption(searchParams.origin, origins));
   const [destination, setDestination] = useState(() => resolvePortOption(searchParams.destination, destinations));
   const [equipment, setEquipment] = useState(
@@ -78,9 +73,8 @@ export default function Rates() {
   const [sortBy, setSortBy] = useState('price');
 
   const [selectedLane, setSelectedLane] = useState(null);
-  const [booked, setBooked] = useState(null); // aviso tras agregar al carrito
+  const [booked, setBooked] = useState(null);
 
-  // Sincroniza automáticamente si searchParams cambia desde LandingPage u otra vista
   useEffect(() => {
     setOrigin(resolvePortOption(searchParams.origin, origins));
     setDestination(resolvePortOption(searchParams.destination, destinations));
@@ -92,7 +86,6 @@ export default function Rates() {
     }
   }, [searchParams.origin, searchParams.destination, searchParams.containerType, searchParams.shipDate]);
 
-  // Asegura que un puerto escrito manualmente en LandingPage también aparezca visible en el select
   const originOptions = origin !== ALL && !origins.includes(origin) ? [origin, ...origins] : origins;
   const destinationOptions =
     destination !== ALL && !destinations.includes(destination) ? [destination, ...destinations] : destinations;
@@ -126,7 +119,6 @@ export default function Rates() {
     setSortBy('price');
   };
 
-  // Tarifas ya ajustadas al tipo de equipo, filtradas y ordenadas
   const lanes = lanesData
     .map((lane) => ({ ...lane, rate: Math.round(lane.rate * eq.mult) }))
     .filter((l) => {
@@ -156,8 +148,8 @@ export default function Rates() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f7fafc] text-[#041627] font-sans">
-      <main className="flex-1 w-full max-w-[1728px] mx-auto px-6 lg:px-[54px] py-8 flex flex-col gap-8">
-        {/* Encabezado y filtros */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 flex flex-col gap-8">
+        {/* Header & Filters */}
         <section className="bg-[#041627] text-white p-6 lg:p-8 rounded-[5px] flex flex-col gap-6">
           <div>
             <h1 className="text-2xl lg:text-3xl font-bold">Freight Rates & Routes</h1>
@@ -218,7 +210,7 @@ export default function Rates() {
           </div>
         </section>
 
-        {/* Aviso de reserva */}
+        {/* Booking Banner */}
         {booked && (
           <div role="status" className="flex items-center justify-between gap-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded px-4 py-3 text-sm">
             <span className="flex items-center gap-2">
@@ -234,7 +226,7 @@ export default function Rates() {
           </div>
         )}
 
-        {/* Resultados */}
+        {/* Results */}
         <section className="flex flex-col gap-4">
           <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-3 border-b border-[#c4c6cd] pb-3">
             <div>
@@ -300,81 +292,79 @@ export default function Rates() {
                         {lane.status}
                       </span>
                       {lane.id === cheapestId && (
-                        <span className="text-[10px] font-mono font-bold bg-brand-orange text-[#181c1e] px-2 py-0.5 rounded uppercase">Cheapest</span>
+                        <span className="text-[10px] font-mono uppercase bg-[#041627] text-white px-2 py-0.5 rounded font-bold">
+                          Best price
+                        </span>
                       )}
                       {lane.id === fastestId && (
-                        <span className="text-[10px] font-mono font-bold bg-[#041627] text-white px-2 py-0.5 rounded uppercase">Fastest</span>
+                        <span className="text-[10px] font-mono uppercase bg-brand-orange/20 text-[#041627] px-2 py-0.5 rounded font-bold">
+                          Fastest
+                        </span>
                       )}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-[#44474c] font-mono">
-                      <span className="flex items-center gap-1">
-                        <Route className="size-4 text-[#74777d]" />
-                        {lane.code}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="size-4 text-[#74777d]" />
-                        {lane.transitTime}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="size-4 text-[#74777d]" />
-                        {lane.frequency}
+                    <div className="flex items-center gap-2 text-base font-medium text-[#44474c]">
+                      <Route className="size-4 text-brand-orange shrink-0" />
+                      <span>
+                        {lane.origin} → {lane.destination}
                       </span>
                     </div>
-                    <span className="text-xs font-mono text-[#74777d]">
-                      Est. arrival: <strong className="text-[#041627]">{arrivalDate(shipDate, lane.transitTime)}</strong>
-                    </span>
+
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono text-[#74777d]">
+                      <span className="flex items-center gap-1">
+                        <Clock className="size-3.5" /> Transit: {lane.transitTime}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="size-3.5" /> Est. arrival: {arrivalDate(shipDate, lane.transitTime)}
+                      </span>
+                      <span>Code: {lane.code}</span>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-[#ebeef0] pt-3 md:pt-0">
-                    <div className="text-right">
-                      <span className="text-xs font-mono text-[#74777d] uppercase block">Base Rate ({eq.label})</span>
-                      <span className="text-xl font-mono font-bold text-[#041627]">{money(lane.rate)} USD</span>
+                  <div className="w-full md:w-auto flex flex-row md:flex-col items-center md:items-end justify-between gap-2 pt-3 md:pt-0 border-t md:border-t-0 border-[#ebeef0]">
+                    <div className="md:text-right">
+                      <div className="font-mono font-bold text-2xl text-[#041627]">
+                        {money(lane.rate)} <span className="text-xs font-normal text-gray-500">USD</span>
+                      </div>
+                      <div className="text-xs text-[#74777d] font-mono">{eq.label}</div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        bookLane(lane);
-                      }}
-                      className="bg-brand-orange hover:brightness-95 text-[#181c1e] font-mono font-bold text-xs px-4 py-2.5 rounded transition uppercase cursor-pointer"
-                    >
-                      Book Lane
-                    </button>
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedLane(lane)}
+                        className="border border-[#c4c6cd] hover:border-[#041627] px-3 py-1.5 rounded text-xs font-mono font-bold uppercase text-[#041627] transition cursor-pointer"
+                      >
+                        Breakdown
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => bookLane(lane)}
+                        className="bg-brand-orange hover:brightness-95 px-3 py-1.5 rounded text-xs font-mono font-bold uppercase text-[#181c1e] transition cursor-pointer"
+                      >
+                        Book rate
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
             )}
           </div>
         </section>
-
-        {/* Desglose de tarifa de la ruta seleccionada */}
-        {selectedLane && (
-          <section className="flex flex-col gap-3 max-w-xl">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-mono font-bold uppercase text-[#44474c]">
-                {selectedLane.carrier} · {selectedLane.code}
-              </h2>
-              <button
-                type="button"
-                onClick={() => setSelectedLane(null)}
-                className="text-xs font-mono font-bold uppercase text-[#44474c] hover:text-[#041627] cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-            <RateBreakdown items={buildBreakdown(selectedLane.rate)} total={selectedLane.rate.toLocaleString('en-US')} />
-            <button
-              type="button"
-              onClick={() => bookLane(selectedLane)}
-              className="bg-brand-orange hover:brightness-95 text-[#181c1e] font-mono font-bold text-xs px-4 py-2.5 rounded transition uppercase cursor-pointer"
-            >
-              Book this lane
-            </button>
-          </section>
-        )}
       </main>
+
+      {selectedLane && (
+        <RateBreakdown
+          lane={selectedLane}
+          equipment={eq.label}
+          shipDate={shipDate}
+          arrival={arrivalDate(shipDate, selectedLane.transitTime)}
+          breakdown={buildBreakdown(selectedLane.rate)}
+          onBook={() => bookLane(selectedLane)}
+          onClose={() => setSelectedLane(null)}
+        />
+      )}
+
       <Footer />
     </div>
   );

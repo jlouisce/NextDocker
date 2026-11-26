@@ -1,8 +1,21 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { containersData } from '../data/mockData';
+import { supabase } from '../utils/supabaseClient';
+import { getSession, syncSupabaseSession } from '../utils/auth';
 
-// Contexto global: catálogo, carrito, reservas y parámetros de búsqueda
 const AppContext = createContext();
+
+const mapDbRowToReservation = (row) => ({
+  id: row.id,
+  orderRef: row.order_ref,
+  containerId: row.container_id,
+  title: row.title,
+  origin: row.origin,
+  destination: row.destination,
+  shipDate: row.ship_date,
+  unitCost: Number(row.unit_cost || 0),
+  freight: Number(row.freight || 0),
+});
 
 export function AppProvider({ children }) {
   const [containers] = useState(containersData);
@@ -28,22 +41,147 @@ export function AppProvider({ children }) {
       const parsed = JSON.parse(savedCart);
       return Array.isArray(parsed) ? parsed : [];
     } catch {
-      // Si el JSON guardado está corrupto, se arranca con lista vacía
       return [];
     }
   });
 
-  const [reservations, setReservations] = useState(() => {
+  const [reservations, setReservationsState] = useState(() => {
     try {
       const savedReservations = localStorage.getItem('nextdocker_reservations');
       if (!savedReservations) return [];
       const parsed = JSON.parse(savedReservations);
       return Array.isArray(parsed) ? parsed : [];
     } catch {
-      // Si el JSON guardado está corrupto, se arranca con lista vacía
       return [];
     }
   });
+
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nextdocker_notifications');
+      if (!saved) return [];
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const seenTrackingsRef = useRef(new Set(notifications.map((n) => n.trackingNumber)));
+  const activeUserIdRef = useRef(null);
+
+  const pushUniqueNotification = (order, idx = 0) => {
+    const tracking = order.orderRef || `TRK-${Date.now().toString().slice(-6)}-${idx + 1}`;
+    if (seenTrackingsRef.current.has(tracking)) return;
+    seenTrackingsRef.current.add(tracking);
+
+    const route =
+      order.origin && order.destination
+        ? `${order.origin} → ${order.destination}`
+        : 'Global Freight Corridor';
+
+    setNotifications((prev) => {
+      if (prev.some((n) => n.trackingNumber === tracking)) return prev;
+      return [
+        {
+          id: `notif-${tracking}`,
+          title: 'Order Processed',
+          message: `Your shipment (${route}) has been confirmed and processed.`,
+          trackingNumber: tracking,
+          createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          read: false,
+        },
+        ...prev,
+      ];
+    });
+  };
+
+  // Sincronización segura sin bucles de eventos
+  useEffect(() => {
+    let isMounted = true;
+    let channel = null;
+
+    const loadUserReservations = async (userId) => {
+      if (!userId) {
+        if (isMounted) setReservationsState([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('reservations')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: true });
+
+      if (!isMounted) return;
+
+      if (!error && Array.isArray(data)) {
+        const mapped = data.map(mapDbRowToReservation);
+        setReservationsState(mapped);
+        mapped.forEach((m) => seenTrackingsRef.current.add(m.orderRef));
+      }
+
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+
+      channel = supabase
+        .channel(`reservations-user-${userId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'reservations',
+            filter: `user_id=eq.${userId}`,
+          },
+          (payload) => {
+            if (!isMounted) return;
+            const incoming = mapDbRowToReservation(payload.new);
+            setReservationsState((prev) => {
+              if (prev.some((item) => item.id === incoming.id || item.orderRef === incoming.orderRef)) {
+                return prev;
+              }
+              return [...prev, incoming];
+            });
+            pushUniqueNotification(incoming);
+          }
+        )
+        .subscribe();
+    };
+
+    const init = async () => {
+      const user = await syncSupabaseSession({ notify: true });
+      if (!isMounted) return;
+      const uid = user?.id || null;
+      activeUserIdRef.current = uid;
+      await loadUserReservations(uid);
+    };
+
+    init();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!isMounted) return;
+      const nextUid = session?.user?.id || null;
+      if (event === 'SIGNED_OUT') {
+        activeUserIdRef.current = null;
+        if (channel) supabase.removeChannel(channel);
+        setReservationsState([]);
+        return;
+      }
+      if (nextUid && nextUid !== activeUserIdRef.current) {
+        activeUserIdRef.current = nextUid;
+        await syncSupabaseSession({ notify: true });
+        await loadUserReservations(nextUid);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      authListener?.subscription?.unsubscribe();
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -60,6 +198,55 @@ export function AppProvider({ children }) {
       console.error(e);
     }
   }, [reservations]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('nextdocker_notifications', JSON.stringify(notifications));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [notifications]);
+
+  const setReservations = async (updater) => {
+    const next = typeof updater === 'function' ? updater(reservations) : updater;
+    const addedItems = Array.isArray(next) ? next.slice(reservations.length) : [];
+
+    setReservationsState(next);
+    addedItems.forEach((order, idx) => pushUniqueNotification(order, idx));
+
+    const session = getSession();
+    if (session?.id && addedItems.length > 0) {
+      const rowsToInsert = addedItems.map((item) => ({
+        user_id: session.id,
+        order_ref: item.orderRef || `RES-${Math.floor(100000 + Math.random() * 900000)}`,
+        container_id: item.containerId || item.id || '20ft-standard',
+        title: item.title || 'Standard Container',
+        origin: item.origin || 'Shanghai (CNSHA)',
+        destination: item.destination || 'Los Angeles (USLAX)',
+        ship_date: item.shipDate || new Date().toISOString().split('T')[0],
+        unit_cost: Number(item.unitCost || item.price || 2100),
+        freight: Number(item.freight || 1200),
+      }));
+
+      const { error } = await supabase.from('reservations').insert(rowsToInsert);
+      if (error) {
+        console.error('Error saving reservation to Supabase:', error.message);
+      }
+    }
+  };
+
+  const markAllNotificationsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const clearNotifications = () => {
+    setNotifications([]);
+    try {
+      localStorage.removeItem('nextdocker_notifications');
+    } catch {
+      // se ignora
+    }
+  };
 
   const addToCart = (containerId, customOrigin, customShipDate, customDestination) => {
     const isObj = typeof containerId === 'object' && containerId !== null;
@@ -79,8 +266,6 @@ export function AppProvider({ children }) {
   };
 
   const removeFromCart = (targetId) => {
-    // Se elimina por cartItemId (único). Solo los ítems antiguos sin ese campo
-    // se comparan por containerId, para no borrar otros ítems del mismo contenedor.
     setCart((prevCart) =>
       (prevCart || []).filter((item) =>
         item.cartItemId ? item.cartItemId !== targetId : item.containerId !== targetId
@@ -115,7 +300,7 @@ export function AppProvider({ children }) {
     try {
       localStorage.removeItem('nextdocker_cart');
     } catch {
-      // localStorage no disponible: se ignora
+      // se ignora
     }
   };
 
@@ -132,6 +317,9 @@ export function AppProvider({ children }) {
         clearCart,
         reservations,
         setReservations,
+        notifications,
+        markAllNotificationsRead,
+        clearNotifications,
         searchParams,
         updateSearchParams,
       }}
@@ -141,7 +329,6 @@ export function AppProvider({ children }) {
   );
 }
 
-// Hook de consumo del contexto global
 // eslint-disable-next-line react-refresh/only-export-components
 export function useApp() {
   const context = useContext(AppContext);

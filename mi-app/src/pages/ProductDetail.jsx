@@ -9,7 +9,6 @@ export default function ProductDetail() {
   const navigate = useNavigate();
   const { searchParams = {}, updateSearchParams, addToCart } = useApp() || {};
 
-  // Obtención del contenedor actual
   const container =
     cartCatalog[id] ||
     containersData?.find((c) => c.id === id) || {
@@ -22,21 +21,18 @@ export default function ProductDetail() {
       payload: '21,770 kg',
     };
 
-  // Inicializar origen y destino desde el contexto global (searchParams), priorizando cambios locales
   const [userOrigin, setSelectedOrigin] = useState(null);
   const [userDestination, setSelectedDestination] = useState(null);
 
   const selectedOrigin = userOrigin ?? (searchParams.origin || 'Shanghai (CNSHA)');
   const selectedDestination = userDestination ?? (searchParams.destination || 'Los Angeles (USLAX)');
 
-  // Lista de orígenes base
   const baseOrigins = container.origins || [
     { port: 'Shanghai', code: 'CNSHA', freight: 1200 },
     { port: 'Rotterdam', code: 'NLRTM', freight: 1400 },
     { port: 'Los Angeles', code: 'USLAX', freight: 1300 },
   ];
 
-  // Comprobar si el origen ingresado existe en los base; si no, incluirlo dinámicamente
   const hasMatch = baseOrigins.some(
     (o) =>
       o.code.toLowerCase() === selectedOrigin.toLowerCase() ||
@@ -79,7 +75,7 @@ export default function ProductDetail() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f7fafc] text-[#041627] font-sans">
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 py-10">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
         <div className="mb-4">
           <Link to="/marketplace" className="text-xs font-mono font-bold text-slate-500 hover:text-slate-800">
             &larr; BACK TO MARKETPLACE
@@ -125,7 +121,6 @@ export default function ProductDetail() {
               </p>
 
               <div className="space-y-4">
-                {/* Selector con el Origen Preservado */}
                 <div>
                   <label className="block text-[11px] font-mono text-slate-300 uppercase mb-1">
                     Origin Port

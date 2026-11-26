@@ -1,32 +1,28 @@
-import { ArrowRight, Building2, Container, Lock, Mail, User } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { registerUser } from '../../utils/auth';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Anchor, ArrowLeft, Building2, Lock, Mail, User } from 'lucide-react';
+import { getSession, registerUser } from '../../utils/auth';
 
-const label = 'font-mono font-bold text-xs tracking-[0.05em] uppercase text-[#44474c]';
-const input =
-  'w-full bg-[#f7fafc] border border-[#c4c6cd] rounded-[2px] pl-[41px] pr-[13px] py-[11px] text-base text-[#181c1e] placeholder:text-[#74777d] focus:outline-none focus:border-[#041627]';
-
-const fields = [
-  { name: 'name', label: 'Full name', type: 'text', placeholder: 'Jane Doe', Icon: User, autoComplete: 'name' },
-  { name: 'email', label: 'Work email', type: 'email', placeholder: 'jane.doe@company.com', Icon: Mail, autoComplete: 'email' },
-  { name: 'company', label: 'Company name', type: 'text', placeholder: 'Global Logistics Co.', Icon: Building2, autoComplete: 'organization' },
-  { name: 'password', label: 'Password', type: 'password', placeholder: '••••••••', Icon: Lock, autoComplete: 'new-password' },
-];
-
-// Registro simulado: guarda el usuario en localStorage e inicia sesión (ver utils/auth.js).
 export default function SignUpDashboard() {
   const navigate = useNavigate();
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  if (getSession()) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
     const data = Object.fromEntries(new FormData(e.currentTarget));
-    if (data.password.length < 6) {
+    if (!data.password || data.password.length < 6) {
       setError('Password must be at least 6 characters.');
       return;
     }
-    const result = registerUser(data);
+    setLoading(true);
+    const result = await registerUser(data);
+    setLoading(false);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -35,67 +31,112 @@ export default function SignUpDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f7fafc] flex items-center justify-center px-4 py-12 font-sans">
-      <main className="relative w-full max-w-[448px] bg-white border border-[#c4c6cd] rounded-[4px] overflow-hidden shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06)]">
-        <div className="absolute inset-x-0 top-0 h-1 bg-[#041627]" />
-        <div className="p-8 flex flex-col items-center">
-          <div className="pb-4 flex flex-col items-center">
-            <div className="bg-[#041627] rounded-[2px] w-12 py-2 flex items-center justify-center">
-              <Container className="size-5 text-white" aria-hidden="true" />
+    <div className="min-h-screen bg-[#f7fafc] flex flex-col justify-center px-4 py-12 font-sans text-[#041627]">
+      <div className="max-w-md w-full mx-auto">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-xs font-mono uppercase text-slate-600 hover:text-[#041627] mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Main Portal
+        </Link>
+
+        <div className="bg-white border border-[#c4c6cd] rounded-lg shadow-sm overflow-hidden">
+          <div className="bg-[#041627] text-white px-6 py-5 flex items-center gap-3">
+            <Anchor className="w-6 h-6 text-brand-orange" />
+            <div>
+              <h1 className="text-lg font-bold tracking-tight">Create Operator Account</h1>
+              <p className="text-xs font-mono text-slate-300">NextDocker Cloud Fleet Access</p>
             </div>
-            <span className="text-2xl font-bold text-[#041627] tracking-[-0.025em] leading-8">NextDocker</span>
           </div>
-          <h1 className="pb-2 text-xl font-semibold text-[#181c1e] leading-7">Create Account</h1>
-          <p className="pb-8 text-sm text-[#44474c]">Register a new administrator node.</p>
 
-          <form className="w-full flex flex-col gap-4" onSubmit={handleSubmit}>
-            {fields.map((field) => (
-              <div key={field.name} className="flex flex-col gap-2">
-                <label htmlFor={`signup-${field.name}`} className={label}>{field.label}</label>
-                <div className="relative">
-                  <field.Icon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#44474c] pointer-events-none" aria-hidden="true" />
-                  <input
-                    id={`signup-${field.name}`}
-                    name={field.name}
-                    type={field.type}
-                    required
-                    placeholder={field.placeholder}
-                    autoComplete={field.autoComplete}
-                    className={input}
-                  />
-                </div>
+          <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2.5 rounded">
+                {error}
               </div>
-            ))}
+            )}
 
-            <label className="pt-2 flex items-start gap-2 text-sm text-[#44474c] cursor-pointer">
-              <input
-                type="checkbox"
-                required
-                className="mt-[2px] size-4 rounded-[2px] border border-[#c4c6cd] accent-[#041627]"
-              />
-              <span>
-                I agree to the <span className="text-[#041627]">Terms of Service</span> and{' '}
-                <span className="text-[#041627]">Privacy Policy</span>.
-              </span>
-            </label>
+            <div>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-600 mb-1">
+                Full Name *
+              </label>
+              <div className="relative">
+                <User className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  name="name"
+                  required
+                  placeholder="Andres Silva"
+                  className="w-full bg-[#f7fafc] border border-[#c4c6cd] rounded pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-[#041627]"
+                />
+              </div>
+            </div>
 
-            {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+            <div>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-600 mb-1">
+                Work Email *
+              </label>
+              <div className="relative">
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  placeholder="operator@company.com"
+                  className="w-full bg-[#f7fafc] border border-[#c4c6cd] rounded pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-[#041627]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-600 mb-1">
+                Company Name
+              </label>
+              <div className="relative">
+                <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  name="company"
+                  placeholder="Pacific Maritime Logistics"
+                  className="w-full bg-[#f7fafc] border border-[#c4c6cd] rounded pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-[#041627]"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-600 mb-1">
+                Password *
+              </label>
+              <div className="relative">
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                <input
+                  type="password"
+                  name="password"
+                  required
+                  minLength={6}
+                  placeholder="Minimum 6 characters"
+                  className="w-full bg-[#f7fafc] border border-[#c4c6cd] rounded pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-[#041627]"
+                />
+              </div>
+            </div>
 
             <button
               type="submit"
-              className="mt-4 bg-brand-orange hover:brightness-95 transition rounded-[2px] px-4 py-3 flex items-center justify-center gap-2 text-base font-bold text-[#181c1e]"
+              disabled={loading}
+              className="mt-2 w-full bg-brand-orange hover:brightness-95 disabled:opacity-60 text-[#181c1e] font-mono font-bold text-xs uppercase py-3 rounded transition cursor-pointer"
             >
-              Create Admin Account
-              <ArrowRight className="size-4" aria-hidden="true" />
+              {loading ? 'Creating Account...' : 'Create Account'}
             </button>
-          </form>
 
-          <div className="mt-8 w-full border-t border-[#c4c6cd] pt-[17px] text-center text-sm text-[#44474c]">
-            Already have an account?{' '}
-            <Link to="/dashboard/login" className="text-[#041627] hover:underline">Sign In</Link>
-          </div>
+            <p className="text-xs text-center text-slate-600 pt-2 border-t border-slate-100">
+              Already registered?{' '}
+              <Link to="/dashboard/login" className="font-bold text-[#041627] hover:underline">
+                Sign In
+              </Link>
+            </p>
+          </form>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

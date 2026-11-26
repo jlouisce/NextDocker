@@ -1,22 +1,24 @@
-import { Container, Lock, Mail } from 'lucide-react';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { loginUser } from '../../utils/auth';
-const authBg = "/assets/figma/auth-bg.jpg";
+import { Link, Navigate, useNavigate } from 'react-router-dom';
+import { Anchor, ArrowLeft, Lock, Mail } from 'lucide-react';
+import { getSession, loginUser } from '../../utils/auth';
 
-const label = 'font-mono font-bold text-xs tracking-[0.05em] uppercase';
-const input =
-  'w-full bg-[#f7fafc] border border-[#c4c6cd] rounded-[2px] pl-[41px] pr-[13px] py-[15px] text-base text-[#181c1e] placeholder:text-[#c4c6cd] focus:outline-none focus:border-[#041627]';
-
-// Login simulado: valida contra los usuarios guardados en localStorage (ver utils/auth.js).
 export default function LoginDashboard() {
   const navigate = useNavigate();
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  if (getSession()) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setLoading(true);
     const data = new FormData(e.currentTarget);
-    const result = loginUser(data.get('email'), data.get('password'));
+    const result = await loginUser(data.get('email'), data.get('password'));
+    setLoading(false);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -25,76 +27,80 @@ export default function LoginDashboard() {
   };
 
   return (
-    <div className="relative min-h-screen bg-[#041627] flex items-center justify-center px-4 py-12 font-sans overflow-hidden">
-      <img src={authBg} alt="" className="absolute inset-0 size-full object-cover mix-blend-multiply opacity-20" />
-      <div className="absolute inset-0 bg-[#041627] opacity-90" />
+    <div className="min-h-screen bg-[#f7fafc] flex flex-col justify-center px-4 py-12 font-sans text-[#041627]">
+      <div className="max-w-md w-full mx-auto">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-xs font-mono uppercase text-slate-600 hover:text-[#041627] mb-6"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Main Portal
+        </Link>
 
-      <main className="relative w-full max-w-[440px] flex flex-col gap-8">
-        <div className="bg-[#f7fafc] border border-[#c4c6cd] rounded-[2px] overflow-hidden shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1),0_2px_4px_-1px_rgba(0,0,0,0.06)]">
-          <div className="border-b border-[#ebeef0] px-8 pt-8 pb-[25px] flex flex-col items-center gap-2">
-            <div className="bg-[#041627] rounded-[2px] w-12 py-2 flex items-center justify-center">
-              <Container className="size-5 text-white" aria-hidden="true" />
+        <div className="bg-white border border-[#c4c6cd] rounded-lg shadow-sm overflow-hidden">
+          <div className="bg-[#041627] text-white px-6 py-5 flex items-center gap-3">
+            <Anchor className="w-6 h-6 text-brand-orange" />
+            <div>
+              <h1 className="text-lg font-bold tracking-tight">NextDocker Operations</h1>
+              <p className="text-xs font-mono text-slate-300">Fleet Administrator Sign In</p>
             </div>
-            <h1 className="pt-2 text-2xl font-semibold text-[#041627] tracking-[-0.025em] leading-8">NextDocker</h1>
-            <p className="text-sm text-[#44474c]">Secure Admin Access</p>
           </div>
 
-          <form className="p-8 flex flex-col gap-6" onSubmit={handleSubmit}>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="login-email" className={`${label} text-[#44474c]`}>Email address</label>
+          <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-3 py-2.5 rounded">
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-600 mb-1">
+                Work Email
+              </label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#44474c] pointer-events-none" aria-hidden="true" />
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
-                  id="login-email"
-                  name="email"
                   type="email"
+                  name="email"
                   required
-                  placeholder="admin@nextdocker.com"
-                  autoComplete="email"
-                  className={input}
+                  placeholder="operator@company.com"
+                  className="w-full bg-[#f7fafc] border border-[#c4c6cd] rounded pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-[#041627]"
                 />
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 pb-2">
-              <div className="flex items-center justify-between">
-                <label htmlFor="login-password" className={`${label} text-[#44474c]`}>Password</label>
-              </div>
+            <div>
+              <label className="block text-xs font-mono font-bold uppercase text-slate-600 mb-1">
+                Password
+              </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-[#44474c] pointer-events-none" aria-hidden="true" />
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
                 <input
-                  id="login-password"
-                  name="password"
                   type="password"
+                  name="password"
                   required
                   placeholder="••••••••"
-                  autoComplete="current-password"
-                  className={input}
+                  className="w-full bg-[#f7fafc] border border-[#c4c6cd] rounded pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-[#041627]"
                 />
               </div>
             </div>
-
-            {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
 
             <button
               type="submit"
-              className={`${label} bg-[#e1c29b] hover:brightness-95 transition text-[#211200] rounded-[2px] border border-transparent px-[17px] py-[13px] drop-shadow-[0_1px_1px_rgba(0,0,0,0.05)]`}
+              disabled={loading}
+              className="mt-2 w-full bg-brand-orange hover:brightness-95 disabled:opacity-60 text-[#181c1e] font-mono font-bold text-xs uppercase py-3 rounded transition cursor-pointer"
             >
-              Sign in
+              {loading ? 'Signing In...' : 'Sign In to Dashboard'}
             </button>
+
+            <p className="text-xs text-center text-slate-600 pt-2 border-t border-slate-100">
+              Don&apos;t have an account?{' '}
+              <Link to="/dashboard/signup" className="font-bold text-[#041627] hover:underline">
+                Register here
+              </Link>
+            </p>
           </form>
-
-          <div className="bg-white border-t border-[#ebeef0] px-8 pt-[17px] pb-4 text-center text-sm text-[#44474c]">
-            New administrator?{' '}
-            <Link to="/dashboard/signup" className={`${label} text-[#041627] hover:underline`}>Register fleet</Link>
-          </div>
         </div>
-
-        <div className="flex items-center justify-center gap-2 opacity-80">
-          <span className="size-2 rounded-full bg-[#10b981]" />
-          <span className={`${label} text-[#d8e3fa]`}>Global network online</span>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
