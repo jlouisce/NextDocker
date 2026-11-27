@@ -1,369 +1,559 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronDown, Route, Clock, Calendar, RotateCcw, CheckCircle2, X } from 'lucide-react';
-import Footer from '../components/Footer';
-import RateBreakdown from '../components/RateBreakdown';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  ArrowRight,
+  Building2,
+  Calendar,
+  Clock,
+  Container,
+  MapPin,
+  RotateCcw,
+  Search,
+  ShieldCheck,
+  Ship,
+  ShoppingCart,
+  Sparkles,
+} from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { lanesData } from '../data/mockData';
+import { containersData } from '../data/mockData';
+import Footer from '../components/Footer';
 
-const ALL = 'all';
-
-const EQUIPMENT = {
-  [ALL]: { label: 'All Equipment Types', containerId: '40ft-hc', mult: 1 },
-  '20ft': { label: "20' Standard Steel", containerId: '20ft-standard', mult: 0.75 },
-  '40hc': { label: "40' High Cube", containerId: '40ft-hc', mult: 1 },
-  reefer: { label: "40' Refrigerated", containerId: 'reefer', mult: 1.4 },
-};
-
-const SORTS = [
-  { id: 'price', label: 'Cheapest' },
-  { id: 'transit', label: 'Fastest' },
-  { id: 'carrier', label: 'Carrier A-Z' },
+const POPULAR_LOCATIONS = [
+  'Cali (COCLO)',
+  'Medellín (COMDE)',
+  'Buenaventura (COBUN)',
+  'Cartagena (COCTG)',
+  'Bogotá (COBOG)',
+  'Shanghai (CNSHA)',
+  'Los Angeles (USLAX)',
+  'Rotterdam (NLRTM)',
+  'Singapore (SGSIN)',
+  'Hamburg (DEHAM)',
+  'Ningbo (CNNGB)',
+  'New York / Newark (USNYC)',
+  'Busan (KRPUS)',
+  'Santos (BRSSZ)',
+  'Callao (PECLL)',
 ];
 
-const unique = (list) => [...new Set(list)];
-const days = (text) => parseInt(text, 10) || 0;
-const money = (n) => `$${n.toLocaleString('en-US')}`;
+const EQUIPMENT_OPTIONS = [
+  { id: '20ft-standard', label: "20' Standard Steel", multiplier: 1.0, baseUnitCost: 2100 },
+  { id: '40ft-standard', label: "40' Standard Dry", multiplier: 1.45, baseUnitCost: 3450 },
+  { id: '40ft-highcube', label: "40' High Cube", multiplier: 1.62, baseUnitCost: 3900 },
+  { id: '40ft-reefer', label: "40' Refrigerated (Reefer)", multiplier: 2.15, baseUnitCost: 6200 },
+];
 
-const resolvePortOption = (paramValue, availablePorts) => {
-  if (!paramValue || paramValue === ALL) return ALL;
-  const clean = paramValue.trim().toLowerCase();
-  const exact = availablePorts.find((p) => p.toLowerCase() === clean);
-  if (exact) return exact;
-  const partial = availablePorts.find((p) => p.toLowerCase().includes(clean));
-  return partial || paramValue;
-};
+const CARRIERS = [
+  {
+    code: 'MAEU',
+    name: 'Maersk Line',
+    service: 'Express Direct Corridor',
+    rateFactor: 1.14,
+    transitOffset: -2,
+    reliability: '98.4%',
+    sailingFreq: 'Tue / Fri',
+    badge: 'FASTEST',
+  },
+  {
+    code: 'MSCU',
+    name: 'MSC Mediterranean',
+    service: 'Global Liner Standard',
+    rateFactor: 0.94,
+    transitOffset: 1,
+    reliability: '95.1%',
+    sailingFreq: 'Mon / Thu',
+    badge: 'BEST VALUE',
+  },
+  {
+    code: 'CMDU',
+    name: 'CMA CGM',
+    service: 'Priority Intermodal Hub',
+    rateFactor: 1.03,
+    transitOffset: 0,
+    reliability: '96.8%',
+    sailingFreq: 'Wed / Sat',
+    badge: 'POPULAR',
+  },
+  {
+    code: 'HLCU',
+    name: 'Hapag-Lloyd',
+    service: 'Atlantic & Pacific Shuttle',
+    rateFactor: 1.08,
+    transitOffset: -1,
+    reliability: '97.2%',
+    sailingFreq: 'Tue / Sat',
+    badge: null,
+  },
+  {
+    code: 'COSU',
+    name: 'COSCO Shipping',
+    service: 'Economy Feeder & Trunk',
+    rateFactor: 0.89,
+    transitOffset: 3,
+    reliability: '93.7%',
+    sailingFreq: 'Sun / Wed',
+    badge: 'LOWEST FARE',
+  },
+];
 
-const arrivalDate = (shipDate, transit) => {
-  const d = new Date(`${shipDate}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return '—';
-  d.setDate(d.getDate() + days(transit));
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-};
+// Calcula una distancia y tarifa base determinística y realista según el par Origen -> Destino
+function computeRouteMetrics(origin, destination) {
+  const cleanOrigin = origin.trim().toLowerCase();
+  const cleanDest = destination.trim().toLowerCase();
 
-const buildBreakdown = (rate) => {
-  const docs = 50;
-  const net = rate - docs;
-  const parts = [
-    ['Base Ocean Freight', Math.round(net * 0.72)],
-    ['BAF (Fuel)', Math.round(net * 0.14)],
-    ['CAF', Math.round(net * 0.04)],
-  ];
-  parts.push(['Port Handling (THC)', net - parts.reduce((s, [, v]) => s + v, 0)]);
-  parts.push(['Documentation', docs]);
-  return parts.map(([label, amount]) => ({ label, amount: money(amount) }));
-};
+  const colombianCities = ['cali', 'medellin', 'medellín', 'bogota', 'bogotá', 'buenaventura', 'cartagena', 'barranquilla'];
+  const originIsCol = colombianCities.some((c) => cleanOrigin.includes(c));
+  const destIsCol = colombianCities.some((c) => cleanDest.includes(c));
 
-const selectClass =
-  'w-full bg-[#182838] text-white border border-[#38485a] rounded px-3 py-2.5 text-sm appearance-none focus:outline-none focus:border-brand-orange cursor-pointer';
-const labelClass = 'text-xs font-mono text-gray-400 uppercase tracking-wider';
+  // Hash determinístico para que cada par de ciudades tenga un precio/distancia consistente pero distinto
+  const pairKey = `${cleanOrigin}->${cleanDest}`;
+  let hash = 0;
+  for (let i = 0; i < pairKey.length; i += 1) {
+    hash = (hash * 31 + pairKey.charCodeAt(i)) % 10000;
+  }
+
+  if (originIsCol && destIsCol) {
+    // Ruta nacional / intermodal dentro de Colombia
+    const distanceKm = 320 + (hash % 680);
+    const baseFreight = 480 + Math.round(distanceKm * 0.65);
+    const baseTransitDays = Math.max(2, Math.round(distanceKm / 260) + 1);
+    return { distanceKm, baseFreight, baseTransitDays, corridorType: 'Domestic Multimodal Corridor' };
+  }
+
+  // Ruta internacional marítima
+  const distanceKm = 4200 + (hash % 11500);
+  const baseFreight = 1450 + Math.round(distanceKm * 0.16);
+  const baseTransitDays = Math.max(8, Math.round(distanceKm / 580));
+  return { distanceKm, baseFreight, baseTransitDays, corridorType: 'International Ocean Freight' };
+}
 
 export default function Rates() {
-  const { searchParams = {}, updateSearchParams, addToCart } = useApp();
+  const navigate = useNavigate();
+  const { searchParams, updateSearchParams, addToCart } = useApp();
 
-  const origins = unique(lanesData.map((l) => l.origin));
-  const destinations = unique(lanesData.map((l) => l.destination));
-
-  const [origin, setOrigin] = useState(() => resolvePortOption(searchParams.origin, origins));
-  const [destination, setDestination] = useState(() => resolvePortOption(searchParams.destination, destinations));
-  const [equipment, setEquipment] = useState(
-    searchParams.containerType && EQUIPMENT[searchParams.containerType] ? searchParams.containerType : ALL
+  // Estados del formulario (antes de pulsar Search Quotes)
+  const [originInput, setOriginInput] = useState(searchParams?.origin || 'Cali (COCLO)');
+  const [destinationInput, setDestinationInput] = useState(searchParams?.destination || 'Medellín (COMDE)');
+  const [equipmentInput, setEquipmentInput] = useState(
+    searchParams?.containerType && searchParams.containerType !== 'all'
+      ? searchParams.containerType
+      : '20ft-standard'
   );
-  const [shipDate, setShipDate] = useState(searchParams.shipDate || new Date().toISOString().split('T')[0]);
-  const [sortBy, setSortBy] = useState('price');
+  const [shipDateInput, setShipDateInput] = useState(
+    searchParams?.shipDate || new Date().toISOString().split('T')[0]
+  );
 
-  const [selectedLane, setSelectedLane] = useState(null);
-  const [booked, setBooked] = useState(null);
+  // Estado activo de la búsqueda ejecutada al hacer clic en "Search Quotes"
+  const [activeQuery, setActiveQuery] = useState({
+    origin: searchParams?.origin || 'Cali (COCLO)',
+    destination: searchParams?.destination || 'Medellín (COMDE)',
+    equipmentId:
+      searchParams?.containerType && searchParams.containerType !== 'all'
+        ? searchParams.containerType
+        : '20ft-standard',
+    shipDate: searchParams?.shipDate || new Date().toISOString().split('T')[0],
+  });
 
-  useEffect(() => {
-    setOrigin(resolvePortOption(searchParams.origin, origins));
-    setDestination(resolvePortOption(searchParams.destination, destinations));
-    if (searchParams.containerType && EQUIPMENT[searchParams.containerType]) {
-      setEquipment(searchParams.containerType);
+  const [sortBy, setSortBy] = useState('CHEAPEST');
+  const [formError, setFormError] = useState('');
+  const [addedCarrier, setAddedCarrier] = useState('');
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    setFormError('');
+
+    const cleanOrigin = originInput.trim();
+    const cleanDest = destinationInput.trim();
+
+    if (!cleanOrigin || !cleanDest) {
+      setFormError('Please enter both an origin location and a destination location.');
+      return;
     }
-    if (searchParams.shipDate) {
-      setShipDate(searchParams.shipDate);
+
+    if (cleanOrigin.toLowerCase() === cleanDest.toLowerCase()) {
+      setFormError('Origin and destination must be different locations.');
+      return;
     }
-  }, [searchParams.origin, searchParams.destination, searchParams.containerType, searchParams.shipDate]);
 
-  const originOptions = origin !== ALL && !origins.includes(origin) ? [origin, ...origins] : origins;
-  const destinationOptions =
-    destination !== ALL && !destinations.includes(destination) ? [destination, ...destinations] : destinations;
+    const nextQuery = {
+      origin: cleanOrigin,
+      destination: cleanDest,
+      equipmentId: equipmentInput,
+      shipDate: shipDateInput || new Date().toISOString().split('T')[0],
+    };
 
-  const eq = EQUIPMENT[equipment] || EQUIPMENT[ALL];
-
-  const changeOrigin = (value) => {
-    setOrigin(value);
-    if (value !== ALL) updateSearchParams({ origin: value });
+    setActiveQuery(nextQuery);
+    updateSearchParams({
+      origin: nextQuery.origin,
+      destination: nextQuery.destination,
+      containerType: nextQuery.equipmentId,
+      shipDate: nextQuery.shipDate,
+    });
   };
 
-  const changeDestination = (value) => {
-    setDestination(value);
-    if (value !== ALL) updateSearchParams({ destination: value });
+  const handleReset = () => {
+    const defaultOrigin = 'Shanghai (CNSHA)';
+    const defaultDest = 'Los Angeles (USLAX)';
+    const defaultEquip = '20ft-standard';
+    const today = new Date().toISOString().split('T')[0];
+
+    setOriginInput(defaultOrigin);
+    setDestinationInput(defaultDest);
+    setEquipmentInput(defaultEquip);
+    setShipDateInput(today);
+    setFormError('');
+    setSortBy('CHEAPEST');
+
+    setActiveQuery({
+      origin: defaultOrigin,
+      destination: defaultDest,
+      equipmentId: defaultEquip,
+      shipDate: today,
+    });
   };
 
-  const changeEquipment = (value) => {
-    setEquipment(value);
-    updateSearchParams({ containerType: value });
-  };
+  const quotes = useMemo(() => {
+    const selectedEquip =
+      EQUIPMENT_OPTIONS.find((eq) => eq.id === activeQuery.equipmentId) || EQUIPMENT_OPTIONS[0];
+    const metrics = computeRouteMetrics(activeQuery.origin, activeQuery.destination);
 
-  const changeDate = (value) => {
-    setShipDate(value);
-    if (value) updateSearchParams({ shipDate: value });
-  };
+    const list = CARRIERS.map((carrier) => {
+      const freightRate = Math.round(
+        metrics.baseFreight * selectedEquip.multiplier * carrier.rateFactor
+      );
+      const portHandlingFee = Math.round(freightRate * 0.12);
+      const totalQuote = freightRate + portHandlingFee;
+      const transitDays = Math.max(1, metrics.baseTransitDays + carrier.transitOffset);
 
-  const resetFilters = () => {
-    setOrigin(ALL);
-    setDestination(ALL);
-    setEquipment(ALL);
-    setSortBy('price');
-  };
-
-  const lanes = lanesData
-    .map((lane) => ({ ...lane, rate: Math.round(lane.rate * eq.mult) }))
-    .filter((l) => {
-      const matchOrigin =
-        origin === ALL || l.origin.toLowerCase().includes(origin.trim().toLowerCase());
-      const matchDestination =
-        destination === ALL || l.destination.toLowerCase().includes(destination.trim().toLowerCase());
-      return matchOrigin && matchDestination;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'price') return a.rate - b.rate;
-      if (sortBy === 'transit') return days(a.transitTime) - days(b.transitTime);
-      return a.carrier.localeCompare(b.carrier);
+      return {
+        ...carrier,
+        equipmentId: selectedEquip.id,
+        equipmentLabel: selectedEquip.label,
+        baseUnitCost: selectedEquip.baseUnitCost,
+        origin: activeQuery.origin,
+        destination: activeQuery.destination,
+        shipDate: activeQuery.shipDate,
+        distanceKm: metrics.distanceKm,
+        corridorType: metrics.corridorType,
+        freightRate,
+        portHandlingFee,
+        totalQuote,
+        transitDays,
+      };
     });
 
-  const cheapestId = lanes.length > 1 ? [...lanes].sort((a, b) => a.rate - b.rate)[0].id : null;
-  const fastestId = lanes.length > 1 ? [...lanes].sort((a, b) => days(a.transitTime) - days(b.transitTime))[0].id : null;
-  const avgRate = lanes.length ? Math.round(lanes.reduce((s, l) => s + l.rate, 0) / lanes.length) : 0;
+    if (sortBy === 'CHEAPEST') {
+      return [...list].sort((a, b) => a.totalQuote - b.totalQuote);
+    }
+    if (sortBy === 'FASTEST') {
+      return [...list].sort((a, b) => a.transitDays - b.transitDays);
+    }
+    return [...list].sort((a, b) => a.name.localeCompare(b.name));
+  }, [activeQuery, sortBy]);
 
-  const bookLane = (lane) => {
-    addToCart(eq.containerId, lane.origin, shipDate, lane.destination);
-    setBooked(lane);
-    setSelectedLane(null);
+  const handleBookQuote = (quote) => {
+    const matchedContainer =
+      containersData.find((c) => c.id === quote.equipmentId) || containersData[0];
+
+    addToCart({
+      containerId: matchedContainer?.id || quote.equipmentId,
+      origin: quote.origin,
+      destination: quote.destination,
+      shipDate: quote.shipDate,
+    });
+
+    setAddedCarrier(quote.code);
+    setTimeout(() => {
+      navigate('/logistics');
+    }, 350);
   };
 
-  const hasFilters = origin !== ALL || destination !== ALL || equipment !== ALL;
+  const selectedEquipmentObj =
+    EQUIPMENT_OPTIONS.find((eq) => eq.id === activeQuery.equipmentId) || EQUIPMENT_OPTIONS[0];
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f7fafc] text-[#041627] font-sans">
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 flex flex-col gap-8">
-        {/* Header & Filters */}
-        <section className="bg-[#041627] text-white p-6 lg:p-8 rounded-[5px] flex flex-col gap-6">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold">Freight Rates & Routes</h1>
-            <p className="text-gray-300 text-sm mt-1">
-              Compare ocean freight rates and schedules across major shipping corridors. Results update as you change the filters.
+        {/* Panel Superior de Cotización */}
+        <section className="bg-[#041627] text-white rounded-xl p-6 sm:p-8 shadow-sm border border-slate-800">
+          <div className="mb-6">
+            <div className="inline-flex items-center gap-2 text-xs font-mono font-bold uppercase tracking-wider text-brand-orange mb-1.5">
+              <Sparkles className="w-3.5 h-3.5" />
+              Multi-Carrier Instant Freight Quoter
+            </div>
+            <h1 className="text-2xl sm:text-4xl font-bold tracking-tight">
+              Freight Rates &amp; Routes
+            </h1>
+            <p className="text-slate-300 text-sm sm:text-base mt-1.5">
+              Enter any origin and destination to compare live container shipping rates across global carriers.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-[#0b1d2d] p-4 rounded-[4px] border border-[#38485a] items-end">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="rates-origin" className={labelClass}>Origin Port</label>
-              <div className="relative">
-                <select id="rates-origin" value={origin} onChange={(e) => changeOrigin(e.target.value)} className={selectClass}>
-                  <option value={ALL}>All origins</option>
-                  {originOptions.map((o) => (
-                    <option key={o} value={o}>{o}</option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+          <form
+            onSubmit={handleSearchSubmit}
+            className="bg-[#0b2239] border border-slate-700/80 rounded-lg p-4 sm:p-5 flex flex-col gap-4"
+          >
+            {formError && (
+              <div className="bg-red-950/80 border border-red-500/60 text-red-200 text-xs px-3.5 py-2.5 rounded">
+                {formError}
+              </div>
+            )}
+
+            <datalist id="nextdocker-locations">
+              {POPULAR_LOCATIONS.map((loc) => (
+                <option key={loc} value={loc} />
+              ))}
+            </datalist>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Origen */}
+              <div>
+                <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                  Origin Port / City *
+                </label>
+                <div className="relative">
+                  <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    list="nextdocker-locations"
+                    value={originInput}
+                    onChange={(e) => setOriginInput(e.target.value)}
+                    placeholder="e.g. Cali, Shanghai..."
+                    required
+                    className="w-full bg-[#132c46] border border-slate-600 focus:border-brand-orange rounded-md pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Destino */}
+              <div>
+                <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                  Destination Port / City *
+                </label>
+                <div className="relative">
+                  <MapPin className="w-4 h-4 text-brand-orange absolute left-3 top-3" />
+                  <input
+                    type="text"
+                    list="nextdocker-locations"
+                    value={destinationInput}
+                    onChange={(e) => setDestinationInput(e.target.value)}
+                    placeholder="e.g. Medellín, Los Angeles..."
+                    required
+                    className="w-full bg-[#132c46] border border-slate-600 focus:border-brand-orange rounded-md pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Tipo de Contenedor */}
+              <div>
+                <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                  Equipment Type
+                </label>
+                <div className="relative">
+                  <Container className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <select
+                    value={equipmentInput}
+                    onChange={(e) => setEquipmentInput(e.target.value)}
+                    className="w-full bg-[#132c46] border border-slate-600 focus:border-brand-orange rounded-md pl-9 pr-3 py-2.5 text-sm text-white focus:outline-none"
+                  >
+                    {EQUIPMENT_OPTIONS.map((eq) => (
+                      <option key={eq.id} value={eq.id}>
+                        {eq.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Fecha de envío */}
+              <div>
+                <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                  Ship Date
+                </label>
+                <div className="relative">
+                  <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+                  <input
+                    type="date"
+                    value={shipDateInput}
+                    onChange={(e) => setShipDateInput(e.target.value)}
+                    className="w-full bg-[#132c46] border border-slate-600 focus:border-brand-orange rounded-md pl-9 pr-3 py-2.5 text-sm text-white focus:outline-none"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label htmlFor="rates-destination" className={labelClass}>Destination Port</label>
-              <div className="relative">
-                <select id="rates-destination" value={destination} onChange={(e) => changeDestination(e.target.value)} className={selectClass}>
-                  <option value={ALL}>All destinations</option>
-                  {destinationOptions.map((d) => (
-                    <option key={d} value={d}>{d}</option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-              </div>
-            </div>
+            {/* Botón Principal de Búsqueda */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-slate-700/70">
+              <p className="text-xs text-slate-400 font-mono">
+                Tip: Pick from suggestions or type any custom city/port pair and click Search Quotes.
+              </p>
 
-            <div className="flex flex-col gap-1">
-              <label htmlFor="rates-equipment" className={labelClass}>Equipment Type</label>
-              <div className="relative">
-                <select id="rates-equipment" value={equipment} onChange={(e) => changeEquipment(e.target.value)} className={selectClass}>
-                  {Object.entries(EQUIPMENT).map(([id, e]) => (
-                    <option key={id} value={id}>{e.label}</option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-              </div>
+              <button
+                type="submit"
+                className="inline-flex items-center justify-center gap-2 bg-brand-orange hover:brightness-95 text-[#181c1e] font-mono font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-md transition cursor-pointer shadow-sm"
+              >
+                <Search className="w-4 h-4" />
+                Search Quotes
+              </button>
             </div>
-
-            <div className="flex flex-col gap-1">
-              <label htmlFor="rates-date" className={labelClass}>Ship Date</label>
-              <input
-                id="rates-date"
-                type="date"
-                value={shipDate}
-                onChange={(e) => changeDate(e.target.value)}
-                className="w-full bg-[#182838] text-white border border-[#38485a] rounded px-3 py-2.5 text-sm focus:outline-none focus:border-brand-orange cursor-pointer"
-              />
-            </div>
-          </div>
+          </form>
         </section>
 
-        {/* Booking Banner */}
-        {booked && (
-          <div role="status" className="flex items-center justify-between gap-4 bg-emerald-50 border border-emerald-300 text-emerald-900 rounded px-4 py-3 text-sm">
-            <span className="flex items-center gap-2">
-              <CheckCircle2 className="size-4 shrink-0" />
-              {booked.carrier} ({booked.code}) added to your cart.
-            </span>
-            <span className="flex items-center gap-4">
-              <Link to="/logistics" className="font-mono font-bold text-xs uppercase underline">Go to cart</Link>
-              <button type="button" onClick={() => setBooked(null)} aria-label="Dismiss" className="cursor-pointer">
-                <X className="size-4" />
-              </button>
-            </span>
-          </div>
-        )}
-
-        {/* Results */}
-        <section className="flex flex-col gap-4">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-end gap-3 border-b border-[#c4c6cd] pb-3">
+        {/* Encabezado de Resultados y Ordenamiento */}
+        <section className="flex flex-col gap-5">
+          <div className="border-b border-[#c4c6cd] pb-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
-              <h2 className="text-xl font-bold text-[#041627]">Available Lanes</h2>
-              <p className="text-xs text-[#74777d] font-mono mt-0.5">
-                {lanes.length} {lanes.length === 1 ? 'result' : 'results'}
-                {lanes.length > 0 && <> · average {money(avgRate)} USD</>} · {eq.label}
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-2xl font-bold text-[#041627]">Available Carrier Quotes</h2>
+                <span className="text-xs font-mono font-bold uppercase bg-amber-100 text-amber-900 px-2.5 py-0.5 rounded border border-amber-300">
+                  {quotes[0]?.corridorType}
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm font-mono text-slate-600 mt-1 flex flex-wrap items-center gap-1.5">
+                <strong className="text-[#041627]">{activeQuery.origin}</strong>
+                <ArrowRight className="w-3.5 h-3.5 text-amber-600 inline" />
+                <strong className="text-[#041627]">{activeQuery.destination}</strong>
+                <span>• {quotes.length} carriers</span>
+                <span>• {selectedEquipmentObj.label}</span>
+                <span>• ~{quotes[0]?.distanceKm.toLocaleString('en-US')} km</span>
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-mono text-[#74777d] uppercase">Sort by</span>
-              {SORTS.map((s) => (
+              <span className="text-xs font-mono font-bold uppercase text-slate-500 mr-1">
+                Sort By
+              </span>
+              {['CHEAPEST', 'FASTEST', 'CARRIER A-Z'].map((option) => (
                 <button
-                  key={s.id}
+                  key={option}
                   type="button"
-                  onClick={() => setSortBy(s.id)}
-                  aria-pressed={sortBy === s.id}
-                  className={`px-3 py-1.5 rounded text-xs font-mono font-bold uppercase border transition cursor-pointer ${
-                    sortBy === s.id
+                  onClick={() => setSortBy(option)}
+                  className={`text-xs font-mono font-bold uppercase px-3 py-2 rounded border transition cursor-pointer ${
+                    sortBy === option
                       ? 'bg-[#041627] text-white border-[#041627]'
-                      : 'bg-white text-[#44474c] border-[#c4c6cd] hover:border-[#041627]'
+                      : 'bg-white text-slate-700 border-[#c4c6cd] hover:bg-slate-100'
                   }`}
                 >
-                  {s.label}
+                  {option}
                 </button>
               ))}
-              {hasFilters && (
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-mono font-bold uppercase text-[#44474c] hover:text-[#041627] cursor-pointer"
-                >
-                  <RotateCcw className="size-3" /> Reset
-                </button>
-              )}
+
+              <button
+                type="button"
+                onClick={handleReset}
+                className="inline-flex items-center gap-1.5 text-xs font-mono font-bold uppercase text-slate-600 hover:text-[#041627] px-3 py-2 rounded hover:bg-slate-200/70 transition cursor-pointer"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Reset
+              </button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-4">
-            {lanes.length === 0 ? (
-              <div className="bg-white p-8 rounded border border-[#c4c6cd] text-center font-mono text-sm text-gray-500 flex flex-col items-center gap-3">
-                No shipping routes available matching your search criteria.
-                <button type="button" onClick={resetFilters} className="underline font-bold text-[#041627] cursor-pointer">
-                  Clear filters
-                </button>
-              </div>
-            ) : (
-              lanes.map((lane) => (
-                <div
-                  key={lane.id}
-                  className="bg-white border border-[#c4c6cd] rounded-[5px] p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm hover:border-[#041627] transition cursor-pointer"
-                  onClick={() => setSelectedLane(lane)}
+          {/* Tarjetas Comparativas por Naviera */}
+          <div className="flex flex-col gap-4">
+            {quotes.map((quote) => {
+              const isSelected = addedCarrier === quote.code;
+
+              return (
+                <article
+                  key={quote.code}
+                  className="bg-white border border-[#c4c6cd] hover:border-[#041627] rounded-lg p-5 sm:p-6 shadow-sm transition flex flex-col lg:flex-row lg:items-center justify-between gap-6"
                 >
-                  <div className="flex flex-col gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono font-bold text-lg text-[#041627]">{lane.carrier}</span>
-                      <span
-                        className={`text-xs font-mono px-2 py-0.5 rounded font-medium ${
-                          lane.status === 'AVAILABLE' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {lane.status}
+                  {/* Info de la Naviera */}
+                  <div className="flex flex-col gap-2 lg:w-1/3">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <span className="w-9 h-9 rounded-md bg-[#041627] text-white font-mono font-bold text-xs flex items-center justify-center shrink-0">
+                        {quote.code}
                       </span>
-                      {lane.id === cheapestId && (
-                        <span className="text-[10px] font-mono uppercase bg-[#041627] text-white px-2 py-0.5 rounded font-bold">
-                          Best price
-                        </span>
-                      )}
-                      {lane.id === fastestId && (
-                        <span className="text-[10px] font-mono uppercase bg-brand-orange/20 text-[#041627] px-2 py-0.5 rounded font-bold">
-                          Fastest
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 text-base font-medium text-[#44474c]">
-                      <Route className="size-4 text-brand-orange shrink-0" />
-                      <span>
-                        {lane.origin} → {lane.destination}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-mono text-[#74777d]">
-                      <span className="flex items-center gap-1">
-                        <Clock className="size-3.5" /> Transit: {lane.transitTime}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="size-3.5" /> Est. arrival: {arrivalDate(shipDate, lane.transitTime)}
-                      </span>
-                      <span>Code: {lane.code}</span>
-                    </div>
-                  </div>
-
-                  <div className="w-full md:w-auto flex flex-row md:flex-col items-center md:items-end justify-between gap-2 pt-3 md:pt-0 border-t md:border-t-0 border-[#ebeef0]">
-                    <div className="md:text-right">
-                      <div className="font-mono font-bold text-2xl text-[#041627]">
-                        {money(lane.rate)} <span className="text-xs font-normal text-gray-500">USD</span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-bold text-[#041627]">{quote.name}</h3>
+                          {quote.badge && (
+                            <span
+                              className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded ${
+                                quote.badge === 'BEST VALUE' || quote.badge === 'LOWEST FARE'
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                  : 'bg-amber-100 text-amber-800 border border-amber-300'
+                              }`}
+                            >
+                              {quote.badge}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 flex items-center gap-1.5 mt-0.5">
+                          <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                          {quote.service}
+                        </p>
                       </div>
-                      <div className="text-xs text-[#74777d] font-mono">{eq.label}</div>
                     </div>
 
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedLane(lane)}
-                        className="border border-[#c4c6cd] hover:border-[#041627] px-3 py-1.5 rounded text-xs font-mono font-bold uppercase text-[#041627] transition cursor-pointer"
-                      >
-                        Breakdown
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => bookLane(lane)}
-                        className="bg-brand-orange hover:brightness-95 px-3 py-1.5 rounded text-xs font-mono font-bold uppercase text-[#181c1e] transition cursor-pointer"
-                      >
-                        Book rate
-                      </button>
+                    <div className="flex flex-wrap items-center gap-4 text-xs font-mono text-slate-600 pt-1">
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        Transit: <strong className="text-[#041627]">{quote.transitDays} days</strong>
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Ship className="w-3.5 h-3.5 text-slate-400" />
+                        Sailings: <strong className="text-[#041627]">{quote.sailingFreq}</strong>
+                      </span>
+                      <span className="inline-flex items-center gap-1 text-emerald-700">
+                        <ShieldCheck className="w-3.5 h-3.5" />
+                        {quote.reliability} on-time
+                      </span>
                     </div>
                   </div>
-                </div>
-              ))
-            )}
+
+                  {/* Ruta Visual */}
+                  <div className="flex items-center justify-between sm:justify-center gap-3 bg-[#f7fafc] border border-slate-200 rounded-md px-4 py-3 lg:w-1/3">
+                    <div className="text-left">
+                      <span className="block text-[10px] font-mono uppercase text-slate-400">Origin</span>
+                      <span className="text-sm font-bold text-[#041627]">{quote.origin}</span>
+                    </div>
+
+                    <div className="flex flex-col items-center px-2">
+                      <span className="text-[10px] font-mono text-slate-500">{quote.transitDays}d</span>
+                      <div className="w-16 sm:w-24 h-[2px] bg-slate-300 relative my-1">
+                        <span className="w-2 h-2 rounded-full bg-brand-orange absolute -top-[3px] right-0" />
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400">{quote.shipDate}</span>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="block text-[10px] font-mono uppercase text-slate-400">Destination</span>
+                      <span className="text-sm font-bold text-[#041627]">{quote.destination}</span>
+                    </div>
+                  </div>
+
+                  {/* Desglose de Cotización y Botón de Selección */}
+                  <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-3 lg:w-1/4 border-t lg:border-t-0 pt-3 lg:pt-0 border-slate-200">
+                    <div className="lg:text-right">
+                      <span className="block text-[11px] font-mono uppercase text-slate-500">
+                        Freight + Terminal Fees
+                      </span>
+                      <p className="text-2xl font-bold font-mono text-[#041627]">
+                        ${quote.totalQuote.toLocaleString('en-US')}{' '}
+                        <span className="text-xs font-normal text-slate-500">USD</span>
+                      </p>
+                      <p className="text-[11px] font-mono text-slate-500">
+                        Freight ${quote.freightRate.toLocaleString('en-US')} + Port ${quote.portHandlingFee.toLocaleString('en-US')}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleBookQuote(quote)}
+                      className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-brand-orange hover:brightness-95 text-[#181c1e] font-mono font-bold text-xs uppercase px-4 py-2.5 rounded transition cursor-pointer"
+                    >
+                      <ShoppingCart className="w-4 h-4" />
+                      {isSelected ? 'Added to Cart...' : 'Select & Book'}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </section>
       </main>
-
-      {selectedLane && (
-        <RateBreakdown
-          lane={selectedLane}
-          equipment={eq.label}
-          shipDate={shipDate}
-          arrival={arrivalDate(shipDate, selectedLane.transitTime)}
-          breakdown={buildBreakdown(selectedLane.rate)}
-          onBook={() => bookLane(selectedLane)}
-          onClose={() => setSelectedLane(null)}
-        />
-      )}
 
       <Footer />
     </div>
