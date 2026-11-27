@@ -20,6 +20,7 @@ const mapDbRowToReservation = (row) => ({
 
 export function AppProvider({ children }) {
   const [containers] = useState(containersData);
+  const [currentUser, setCurrentUser] = useState(() => getSession());
 
   const [searchParams, setSearchParams] = useState({
     origin: 'Shanghai (CNSHA)',
@@ -97,7 +98,7 @@ export function AppProvider({ children }) {
     });
   };
 
-  // Sincronización segura sin bucles de eventos
+  // Sincronización segura con Supabase Auth y tabla reservations
   useEffect(() => {
     let isMounted = true;
     let channel = null;
@@ -154,6 +155,7 @@ export function AppProvider({ children }) {
     const init = async () => {
       const user = await syncSupabaseSession({ notify: true });
       if (!isMounted) return;
+      setCurrentUser(user || getSession() || null);
       const uid = user?.id || null;
       activeUserIdRef.current = uid;
       await loadUserReservations(uid);
@@ -161,24 +163,33 @@ export function AppProvider({ children }) {
 
     init();
 
+    const handleSessionUpdated = () => {
+      if (!isMounted) return;
+      setCurrentUser(getSession());
+    };
+    window.addEventListener('nextdocker_session_updated', handleSessionUpdated);
+
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!isMounted) return;
       const nextUid = session?.user?.id || null;
       if (event === 'SIGNED_OUT') {
         activeUserIdRef.current = null;
+        setCurrentUser(null);
         if (channel) supabase.removeChannel(channel);
         setReservationsState([]);
         return;
       }
       if (nextUid && nextUid !== activeUserIdRef.current) {
         activeUserIdRef.current = nextUid;
-        await syncSupabaseSession({ notify: true });
+        const synced = await syncSupabaseSession({ notify: true });
+        setCurrentUser(synced || getSession() || null);
         await loadUserReservations(nextUid);
       }
     });
 
     return () => {
       isMounted = false;
+      window.removeEventListener('nextdocker_session_updated', handleSessionUpdated);
       authListener?.subscription?.unsubscribe();
       if (channel) supabase.removeChannel(channel);
     };
@@ -209,14 +220,19 @@ export function AppProvider({ children }) {
   }, [notifications]);
 
   const setReservations = async (updater) => {
+    const session = getSession();
+    // Bloqueo obligatorio: nadie puede crear órdenes/recibos sin haber iniciado sesión
+    if (!session?.id) {
+      return { success: false, reason: 'AUTH_REQUIRED' };
+    }
+
     const next = typeof updater === 'function' ? updater(reservations) : updater;
     const addedItems = Array.isArray(next) ? next.slice(reservations.length) : [];
 
     setReservationsState(next);
     addedItems.forEach((order, idx) => pushUniqueNotification(order, idx));
 
-    const session = getSession();
-    if (session?.id && addedItems.length > 0) {
+    if (addedItems.length > 0) {
       const rowsToInsert = addedItems.map((item) => ({
         user_id: session.id,
         order_ref: item.orderRef || `RES-${Math.floor(100000 + Math.random() * 900000)}`,
@@ -232,8 +248,11 @@ export function AppProvider({ children }) {
       const { error } = await supabase.from('reservations').insert(rowsToInsert);
       if (error) {
         console.error('Error saving reservation to Supabase:', error.message);
+        return { success: false, reason: 'DB_ERROR', error };
       }
     }
+
+    return { success: true };
   };
 
   const markAllNotificationsRead = () => {
@@ -308,6 +327,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider
       value={{
+        currentUser,
         containers,
         cart,
         setCart,

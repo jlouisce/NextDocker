@@ -96,16 +96,23 @@ const CARRIERS = [
   },
 ];
 
-// Calcula una distancia y tarifa base determinística y realista según el par Origen -> Destino
 function computeRouteMetrics(origin, destination) {
   const cleanOrigin = origin.trim().toLowerCase();
   const cleanDest = destination.trim().toLowerCase();
 
-  const colombianCities = ['cali', 'medellin', 'medellín', 'bogota', 'bogotá', 'buenaventura', 'cartagena', 'barranquilla'];
+  const colombianCities = [
+    'cali',
+    'medellin',
+    'medellín',
+    'bogota',
+    'bogotá',
+    'buenaventura',
+    'cartagena',
+    'barranquilla',
+  ];
   const originIsCol = colombianCities.some((c) => cleanOrigin.includes(c));
   const destIsCol = colombianCities.some((c) => cleanDest.includes(c));
 
-  // Hash determinístico para que cada par de ciudades tenga un precio/distancia consistente pero distinto
   const pairKey = `${cleanOrigin}->${cleanDest}`;
   let hash = 0;
   for (let i = 0; i < pairKey.length; i += 1) {
@@ -113,14 +120,12 @@ function computeRouteMetrics(origin, destination) {
   }
 
   if (originIsCol && destIsCol) {
-    // Ruta nacional / intermodal dentro de Colombia
     const distanceKm = 320 + (hash % 680);
     const baseFreight = 480 + Math.round(distanceKm * 0.65);
     const baseTransitDays = Math.max(2, Math.round(distanceKm / 260) + 1);
     return { distanceKm, baseFreight, baseTransitDays, corridorType: 'Domestic Multimodal Corridor' };
   }
 
-  // Ruta internacional marítima
   const distanceKm = 4200 + (hash % 11500);
   const baseFreight = 1450 + Math.round(distanceKm * 0.16);
   const baseTransitDays = Math.max(8, Math.round(distanceKm / 580));
@@ -131,9 +136,10 @@ export default function Rates() {
   const navigate = useNavigate();
   const { searchParams, updateSearchParams, addToCart } = useApp();
 
-  // Estados del formulario (antes de pulsar Search Quotes)
   const [originInput, setOriginInput] = useState(searchParams?.origin || 'Cali (COCLO)');
-  const [destinationInput, setDestinationInput] = useState(searchParams?.destination || 'Medellín (COMDE)');
+  const [destinationInput, setDestinationInput] = useState(
+    searchParams?.destination || 'Medellín (COMDE)'
+  );
   const [equipmentInput, setEquipmentInput] = useState(
     searchParams?.containerType && searchParams.containerType !== 'all'
       ? searchParams.containerType
@@ -143,7 +149,6 @@ export default function Rates() {
     searchParams?.shipDate || new Date().toISOString().split('T')[0]
   );
 
-  // Estado activo de la búsqueda ejecutada al hacer clic en "Search Quotes"
   const [activeQuery, setActiveQuery] = useState({
     origin: searchParams?.origin || 'Cali (COCLO)',
     destination: searchParams?.destination || 'Medellín (COMDE)',
@@ -305,14 +310,14 @@ export default function Rates() {
               ))}
             </datalist>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
               {/* Origen */}
               <div>
                 <label className="block text-[11px] font-mono font-bold uppercase tracking-wider text-slate-300 mb-1.5">
                   Origin Port / City *
                 </label>
                 <div className="relative">
-                  <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <MapPin className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     list="nextdocker-locations"
@@ -320,7 +325,7 @@ export default function Rates() {
                     onChange={(e) => setOriginInput(e.target.value)}
                     placeholder="e.g. Cali, Shanghai..."
                     required
-                    className="w-full bg-[#132c46] border border-slate-600 focus:border-brand-orange rounded-md pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none"
+                    className="w-full h-[42px] bg-[#132c46] border border-slate-600 focus:border-brand-orange rounded-md pl-9 pr-3 text-sm text-white placeholder-slate-400 focus:outline-none"
                   />
                 </div>
               </div>
@@ -331,7 +336,7 @@ export default function Rates() {
                   Destination Port / City *
                 </label>
                 <div className="relative">
-                  <MapPin className="w-4 h-4 text-brand-orange absolute left-3 top-3" />
+                  <MapPin className="w-4 h-4 text-brand-orange absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="text"
                     list="nextdocker-locations"
@@ -339,7 +344,7 @@ export default function Rates() {
                     onChange={(e) => setDestinationInput(e.target.value)}
                     placeholder="e.g. Medellín, Los Angeles..."
                     required
-                    className="w-full bg-[#132c46] border border-slate-600 focus:border-brand-orange rounded-md pl-9 pr-3 py-2.5 text-sm text-white placeholder-slate-400 focus:outline-none"
+                    className="w-full h-[42px] bg-[#132c46] border border-slate-600 focus:border-brand-orange rounded-md pl-9 pr-3 text-sm text-white placeholder-slate-400 focus:outline-none"
                   />
                 </div>
               </div>
@@ -350,11 +355,11 @@ export default function Rates() {
                   Equipment Type
                 </label>
                 <div className="relative">
-                  <Container className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <Container className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <select
                     value={equipmentInput}
                     onChange={(e) => setEquipmentInput(e.target.value)}
-                    className="w-full bg-[#132c46] border border-slate-600 focus:border-brand-orange rounded-md pl-9 pr-3 py-2.5 text-sm text-white focus:outline-none"
+                    className="w-full h-[42px] appearance-none bg-[#132c46] border border-slate-600 focus:border-brand-orange rounded-md pl-9 pr-8 text-sm text-white focus:outline-none cursor-pointer"
                   >
                     {EQUIPMENT_OPTIONS.map((eq) => (
                       <option key={eq.id} value={eq.id}>
@@ -362,6 +367,9 @@ export default function Rates() {
                       </option>
                     ))}
                   </select>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">
+                    ▼
+                  </span>
                 </div>
               </div>
 
@@ -371,26 +379,22 @@ export default function Rates() {
                   Ship Date
                 </label>
                 <div className="relative">
-                  <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
+                  <Calendar className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   <input
                     type="date"
                     value={shipDateInput}
                     onChange={(e) => setShipDateInput(e.target.value)}
-                    className="w-full bg-[#132c46] border border-slate-600 focus:border-brand-orange rounded-md pl-9 pr-3 py-2.5 text-sm text-white focus:outline-none"
+                    className="w-full h-[42px] bg-[#132c46] border border-slate-600 focus:border-brand-orange rounded-md pl-9 pr-3 text-sm text-white focus:outline-none"
                   />
                 </div>
               </div>
             </div>
 
             {/* Botón Principal de Búsqueda */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2 border-t border-slate-700/70">
-              <p className="text-xs text-slate-400 font-mono">
-                Tip: Pick from suggestions or type any custom city/port pair and click Search Quotes.
-              </p>
-
+            <div className="flex justify-end pt-3 border-t border-slate-700/70">
               <button
                 type="submit"
-                className="inline-flex items-center justify-center gap-2 bg-brand-orange hover:brightness-95 text-[#181c1e] font-mono font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-md transition cursor-pointer shadow-sm"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-brand-orange hover:brightness-95 text-[#181c1e] font-mono font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-md transition cursor-pointer shadow-sm"
               >
                 <Search className="w-4 h-4" />
                 Search Quotes

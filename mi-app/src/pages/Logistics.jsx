@@ -1,390 +1,468 @@
 import { useState } from 'react';
-import { Calendar, ChevronDown, Info, Route, Trash2, CheckCircle } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import Footer from '../components/Footer';
+import { Link, useNavigate } from 'react-router-dom';
+import {
+  AlertCircle,
+  ArrowRight,
+  Calendar,
+  CheckCircle2,
+  Lock,
+  MapPin,
+  Package,
+  Receipt,
+  ShieldCheck,
+  Trash2,
+  UserCheck,
+} from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import { cartCatalog } from '../data/mockData';
-import { formatShipDate } from '../utils/formatDate';
-
-const money = (value) => `$${(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const moneyShort = (value) => `$${(value || 0).toLocaleString('en-US')}`;
-
-const generarReferencia = () => `RES-${Math.floor(100000 + Math.random() * 900000)}`;
-
-const DEFAULT_DESTINATIONS = [
-  { port: 'Los Angeles', code: 'USLAX' },
-  { port: 'Rotterdam', code: 'NLRTM' },
-  { port: 'Singapore', code: 'SGSIN' },
-  { port: 'Hamburg', code: 'DEHAM' },
-  { port: 'Shanghai', code: 'CNSHA' },
-];
+import { getSession } from '../utils/auth';
+import Footer from '../components/Footer';
 
 export default function Logistics() {
-  const [orderRef, setOrderRef] = useState(null);
-
+  const navigate = useNavigate();
   const {
-    cart: cartState = [],
+    currentUser,
+    containers,
+    cart,
+    setCart,
+    removeFromCart,
     setCartOrigin,
     setCartDestination,
-    removeFromCart,
     clearCart,
     setReservations,
-    searchParams = {},
   } = useApp();
 
-  const cart = cartState
-    .map((rawItem, index) => {
-      const containerId = rawItem.containerId || rawItem.id;
-      const catalogData = cartCatalog[containerId] || {};
-      return {
-        cartItemId: rawItem.cartItemId || `${containerId}-${index}`,
-        containerId,
-        origin: rawItem.origin || searchParams.origin || 'Shanghai (CNSHA)',
-        destination: rawItem.destination || searchParams.destination || 'Los Angeles (USLAX)',
-        shipDate: rawItem.shipDate || searchParams.shipDate || new Date().toISOString().split('T')[0],
-        ...catalogData,
-      };
-    })
-    .filter((item) => item.title || item.unitCost);
+  const [lastOrderRef, setLastOrderRef] = useState('');
+  const [authWarning, setAuthWarning] = useState(false);
 
-  const originOf = (item, code = item.origin) => {
-    const defaultOrigins = item?.origins || [
-      { port: 'Shanghai', code: 'CNSHA', freight: 1200 },
-      { port: 'Rotterdam', code: 'NLRTM', freight: 1400 },
-      { port: 'Los Angeles', code: 'USLAX', freight: 1300 },
-    ];
+  const activeUser = currentUser || getSession();
 
-    if (!code) return defaultOrigins[0];
+  const enrichedCart = (cart || []).map((item, index) => {
+    const spec =
+      containers.find((c) => c.id === item.containerId) || containers[0] || {};
+    const unitCost = Number(spec.price || 2100);
+    const freight = Number(spec.freight || 650);
+    const itemKey = item.cartItemId || `${item.containerId}-${index}`;
 
-    if (typeof code === 'string' && code.trim() !== '') {
-      if (code.includes('(')) {
-        const portName = code.split('(')[0].trim();
-        const portCode = code.split('(')[1]?.replace(')', '').trim() || 'PORT';
-        const matched = defaultOrigins.find((o) => o.code.toLowerCase() === portCode.toLowerCase());
-        return matched || { port: portName, code: portCode, freight: 1350 };
-      }
+    return {
+      ...item,
+      itemKey,
+      title: spec.name || spec.title || 'Standard Container',
+      code: spec.code || spec.isoCode || 'ISO-6346',
+      dimensions: spec.dimensions || "20' / 40' Standard",
+      image: spec.image || '',
+      unitCost,
+      freight,
+    };
+  });
 
-      const found = defaultOrigins.find(
-        (o) => o.code.toLowerCase() === code.toLowerCase() || o.port.toLowerCase().includes(code.toLowerCase())
-      );
-      if (found) return found;
+  const totalMerchandise = enrichedCart.reduce((acc, item) => acc + item.unitCost, 0);
+  const totalFreight = enrichedCart.reduce((acc, item) => acc + item.freight, 0);
+  const grandTotal = totalMerchandise + totalFreight;
 
-      return {
-        port: code.charAt(0).toUpperCase() + code.slice(1),
-        code: code.toUpperCase(),
-        freight: 1350,
-      };
-    }
-
-    return defaultOrigins[0];
+  const handleUpdateShipDate = (targetKey, newDate) => {
+    setCart((prev) =>
+      prev.map((item, idx) => {
+        const key = item.cartItemId || `${item.containerId}-${idx}`;
+        return key === targetKey ? { ...item, shipDate: newDate } : item;
+      })
+    );
   };
 
-  const destinationOf = (code) => {
-    if (!code) return DEFAULT_DESTINATIONS[0];
-
-    if (typeof code === 'string' && code.trim() !== '') {
-      if (code.includes('(')) {
-        const portName = code.split('(')[0].trim();
-        const portCode = code.split('(')[1]?.replace(')', '').trim() || 'PORT';
-        return { port: portName, code: portCode };
-      }
-
-      const found = DEFAULT_DESTINATIONS.find(
-        (d) => d.code.toLowerCase() === code.toLowerCase() || d.port.toLowerCase().includes(code.toLowerCase())
-      );
-      if (found) return found;
-
-      return {
-        port: code.charAt(0).toUpperCase() + code.slice(1),
-        code: code.toUpperCase(),
-      };
+  const handleSingleDispatch = async (item) => {
+    const session = getSession();
+    if (!session?.id) {
+      setAuthWarning(true);
+      return;
     }
 
-    return DEFAULT_DESTINATIONS[0];
-  };
-
-  const setOrigin = (id, origin) => setCartOrigin(id, origin);
-  const setDestination = (id, destination) => {
-    if (typeof setCartDestination === 'function') {
-      setCartDestination(id, destination);
-    }
-  };
-  const removeItem = (targetId) => removeFromCart(targetId);
-
-  const merchandise = cart.reduce((sum, item) => sum + (item.unitCost || 0), 0);
-  const freight = cart.reduce((sum, item) => sum + (originOf(item).freight || 0), 0);
-  const savings = cart.reduce((sum, item) => {
-    const orig = originOf(item);
-    const baseOrig = originOf(item, item.baseOrigin);
-    return sum + Math.max(0, (baseOrig.freight || 0) - (orig.freight || 0));
-  }, 0);
-  const total = merchandise + freight;
-
-  const handleSingleCheckout = (itemToProcess) => {
-    const originObj = originOf(itemToProcess);
-    const destObj = destinationOf(itemToProcess.destination);
-    const originLabel = `${originObj.port} (${originObj.code})`;
-    const destinationLabel = `${destObj.port} (${destObj.code})`;
-    const newRef = generarReferencia();
-
-    const processedItem = {
-      ...itemToProcess,
-      orderRef: newRef,
-      origin: originLabel,
-      selectedOrigin: originLabel,
-      destination: destinationLabel,
-      selectedDestination: destinationLabel,
+    const orderRef = `RES-${Math.floor(100000 + Math.random() * 900000)}`;
+    const newOrder = {
+      orderRef,
+      containerId: item.containerId,
+      title: item.title,
+      origin: item.origin,
+      destination: item.destination,
+      shipDate: item.shipDate,
+      unitCost: item.unitCost,
+      freight: item.freight,
     };
 
-    if (typeof setReservations === 'function') {
-      setReservations((prev) => [...(prev || []), processedItem]);
+    const result = await setReservations((prev) => [...prev, newOrder]);
+    if (result?.reason === 'AUTH_REQUIRED') {
+      setAuthWarning(true);
+      return;
     }
 
-    removeItem(itemToProcess.cartItemId);
-    setOrderRef(newRef);
+    removeFromCart(item.cartItemId || item.containerId);
+    setLastOrderRef(orderRef);
+    setAuthWarning(false);
   };
 
-  const handleCheckoutAll = () => {
-    if (cart.length === 0) return;
+  const handleCheckoutAll = async () => {
+    const session = getSession();
+    if (!session?.id) {
+      setAuthWarning(true);
+      return;
+    }
 
-    const newRef = generarReferencia();
+    if (enrichedCart.length === 0) return;
 
-    const itemsToProcess = cart.map((item) => {
-      const originObj = originOf(item);
-      const destObj = destinationOf(item.destination);
-      const originLabel = `${originObj.port} (${originObj.code})`;
-      const destinationLabel = `${destObj.port} (${destObj.code})`;
-      return {
-        ...item,
-        orderRef: newRef,
-        origin: originLabel,
-        selectedOrigin: originLabel,
-        destination: destinationLabel,
-        selectedDestination: destinationLabel,
-      };
-    });
+    const batchOrders = enrichedCart.map((item) => ({
+      orderRef: `RES-${Math.floor(100000 + Math.random() * 900000)}`,
+      containerId: item.containerId,
+      title: item.title,
+      origin: item.origin,
+      destination: item.destination,
+      shipDate: item.shipDate,
+      unitCost: item.unitCost,
+      freight: item.freight,
+    }));
 
-    if (typeof setReservations === 'function') {
-      setReservations((prevHistory) => [...(prevHistory || []), ...itemsToProcess]);
+    const result = await setReservations((prev) => [...prev, ...batchOrders]);
+    if (result?.reason === 'AUTH_REQUIRED') {
+      setAuthWarning(true);
+      return;
     }
 
     clearCart();
-    setOrderRef(newRef);
+    setLastOrderRef(batchOrders[0].orderRef);
+    setAuthWarning(false);
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f7fafc] text-[#041627] font-sans">
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 flex flex-col lg:flex-row gap-8 items-start">
-        <section className="flex-1 min-w-0 w-full flex flex-col gap-6">
-          <div className="border-b border-[#c4c6cd] pb-4">
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#041627]">Smart Cart</h1>
-            <p className="text-sm sm:text-base text-[#44474c] mt-1">
-              {cart.length} {cart.length === 1 ? 'Container' : 'Containers'} selected for dispatch.
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 flex flex-col gap-6">
+        <div className="border-b border-[#c4c6cd] pb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-[#041627]">
+              Logistics &amp; Dispatch
+            </h1>
+            <p className="text-sm font-mono text-slate-600 mt-1">
+              {enrichedCart.length}{' '}
+              {enrichedCart.length === 1 ? 'container' : 'containers'} selected for dispatch.
             </p>
           </div>
 
-          {cart.length === 0 && (
-            <div role="status" className="bg-white border border-[#c4c6cd] rounded-[5px] p-10 text-center text-[#44474c] flex flex-col items-center gap-3">
-              {orderRef ? (
-                <>
-                  <p className="text-2xl font-semibold text-[#041627]">Order placed successfully!</p>
-                  <p>
-                    Your reference is <span className="font-mono font-bold text-[#041627]">{orderRef}</span>. Check your profile order history for details.
-                  </p>
-                </>
-              ) : (
-                <p>Your cart is empty.</p>
-              )}
-              <Link className="font-mono font-bold text-sm tracking-[0.05em] text-[#041627] underline" to="/marketplace">
-                Continue shopping
-              </Link>
+          {activeUser && (
+            <div className="inline-flex items-center gap-2 text-xs font-mono bg-emerald-50 border border-emerald-200 text-emerald-900 px-3 py-1.5 rounded">
+              <UserCheck className="w-4 h-4 text-emerald-700" />
+              Billing to: <strong>{activeUser.email}</strong>
             </div>
           )}
+        </div>
 
-          {cart.map((item) => {
-            const originObj = originOf(item);
-            const destObj = destinationOf(item.destination);
-
-            const baseOrigins = item.origins || [
-              { port: 'Shanghai', code: 'CNSHA', freight: 1200 },
-              { port: 'Rotterdam', code: 'NLRTM', freight: 1400 },
-              { port: 'Los Angeles', code: 'USLAX', freight: 1300 },
-            ];
-
-            const hasOriginMatch = baseOrigins.some(
-              (o) => o.code === originObj.code || o.port.toLowerCase() === originObj.port.toLowerCase()
-            );
-            const originsList = hasOriginMatch ? baseOrigins : [originObj, ...baseOrigins];
-
-            const hasDestMatch = DEFAULT_DESTINATIONS.some(
-              (d) => d.code === destObj.code || d.port.toLowerCase() === destObj.port.toLowerCase()
-            );
-            const destinationsList = hasDestMatch ? DEFAULT_DESTINATIONS : [destObj, ...DEFAULT_DESTINATIONS];
-
-            const itemTotal = (item.unitCost || 0) + (originObj.freight || 0);
-
-            return (
-              <article
-                key={item.cartItemId}
-                className="bg-white border border-[#c4c6cd] rounded-[5px] p-5 flex flex-col md:flex-row gap-5 shadow-[0_5px_8px_-1px_rgba(0,0,0,0.1),0_3px_5px_-1px_rgba(0,0,0,0.06)]"
-              >
-                <div className="bg-[#ebeef0] h-40 w-full md:w-56 shrink-0 rounded-[3px] overflow-hidden">
-                  <img src={item.image} alt={item.title} className="size-full object-cover" />
+        {/* Bloqueo obligatorio si el usuario NO ha iniciado sesión */}
+        {!activeUser && (
+          <div
+            className={`rounded-lg p-5 border transition ${
+              authWarning
+                ? 'bg-red-50 border-red-400 text-red-950 shadow-sm'
+                : 'bg-amber-50 border-amber-300 text-amber-950'
+            }`}
+          >
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <Lock
+                  className={`w-5 h-5 shrink-0 mt-0.5 ${
+                    authWarning ? 'text-red-600' : 'text-amber-600'
+                  }`}
+                />
+                <div>
+                  <h2 className="text-sm font-bold uppercase font-mono">
+                    Account &amp; Billing Details Required to Place Order
+                  </h2>
+                  <p className="text-xs sm:text-sm mt-1 opacity-90">
+                    You must sign in or create an account with your contact details so we can issue your official shipping receipt and tracking number. Your cart items will be saved.
+                  </p>
                 </div>
+              </div>
 
-                <div className="flex-1 min-w-0 flex flex-col justify-between gap-4">
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-start justify-between gap-4">
-                      <h2 className="text-lg sm:text-xl font-semibold text-[#041627]">{item.title}</h2>
+              <div className="flex items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard/login')}
+                  className="bg-[#041627] hover:bg-slate-800 text-white font-mono font-bold text-xs uppercase px-4 py-2.5 rounded transition cursor-pointer"
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard/login')}
+                  className="bg-brand-orange hover:brightness-95 text-[#181c1e] font-mono font-bold text-xs uppercase px-4 py-2.5 rounded transition cursor-pointer"
+                >
+                  Create Account
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Confirmación de Orden Exitosa */}
+        {lastOrderRef && activeUser && (
+          <div className="bg-emerald-50 border border-emerald-400 rounded-lg p-6 text-center shadow-sm">
+            <CheckCircle2 className="w-10 h-10 text-emerald-600 mx-auto mb-2" />
+            <h2 className="text-xl font-bold text-emerald-950">Order placed successfully!</h2>
+            <p className="text-sm text-emerald-800 mt-1">
+              Your reference is <strong className="font-mono">{lastOrderRef}</strong>. Receipt registered to{' '}
+              <strong className="font-mono">{activeUser.email}</strong>.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs font-mono font-bold uppercase">
+              <Link to="/profile" className="text-[#041627] underline hover:text-amber-700">
+                View Order History &amp; Receipt
+              </Link>
+              <Link to="/marketplace" className="text-emerald-800 underline hover:text-emerald-950">
+                Continue Shopping
+              </Link>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          <div className="lg:col-span-2 flex flex-col gap-4">
+            {enrichedCart.length === 0 ? (
+              <div className="bg-white border border-[#c4c6cd] rounded-lg p-10 text-center">
+                <Package className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+                <p className="text-sm font-mono text-slate-600">
+                  Your dispatch queue is currently empty.
+                </p>
+                <Link
+                  to="/marketplace"
+                  className="inline-block mt-4 bg-[#041627] text-white font-mono font-bold text-xs uppercase px-5 py-2.5 rounded hover:bg-slate-800 transition"
+                >
+                  Browse Containers
+                </Link>
+              </div>
+            ) : (
+              enrichedCart.map((item) => (
+                <article
+                  key={item.itemKey}
+                  className="bg-white border border-[#c4c6cd] rounded-lg p-5 shadow-sm flex flex-col sm:flex-row gap-5"
+                >
+                  {item.image && (
+                    <img
+                      src={item.image}
+                      alt={item.title}
+                      className="w-full sm:w-44 h-36 object-cover rounded border border-slate-200 bg-slate-100 shrink-0"
+                    />
+                  )}
+
+                  <div className="flex-1 flex flex-col justify-between gap-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg font-bold text-[#041627]">{item.title}</h3>
+                        <p className="text-xs font-mono text-slate-500 mt-0.5">
+                          {item.code} • {item.dimensions}
+                        </p>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="block text-[10px] font-mono uppercase text-slate-400">
+                          Unit Cost
+                        </span>
+                        <span className="text-base font-bold font-mono text-[#041627]">
+                          ${item.unitCost.toLocaleString('en-US')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-[#f7fafc] p-3 rounded border border-slate-200">
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase text-slate-500 mb-1">
+                          Origin
+                        </label>
+                        <div className="relative">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
+                          <input
+                            type="text"
+                            value={item.origin || ''}
+                            onChange={(e) =>
+                              setCartOrigin(item.cartItemId || item.containerId, e.target.value)
+                            }
+                            className="w-full bg-white border border-slate-300 rounded pl-7 pr-2 py-1.5 text-xs text-[#041627]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase text-slate-500 mb-1">
+                          Destination
+                        </label>
+                        <div className="relative">
+                          <MapPin className="w-3.5 h-3.5 text-brand-orange absolute left-2.5 top-2.5" />
+                          <input
+                            type="text"
+                            value={item.destination || ''}
+                            onChange={(e) =>
+                              setCartDestination(
+                                item.cartItemId || item.containerId,
+                                e.target.value
+                              )
+                            }
+                            className="w-full bg-white border border-slate-300 rounded pl-7 pr-2 py-1.5 text-xs text-[#041627]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-mono uppercase text-slate-500 mb-1">
+                          Ship Date
+                        </label>
+                        <div className="relative">
+                          <Calendar className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
+                          <input
+                            type="date"
+                            value={item.shipDate || ''}
+                            onChange={(e) => handleUpdateShipDate(item.itemKey, e.target.value)}
+                            className="w-full bg-white border border-slate-300 rounded pl-7 pr-2 py-1.5 text-xs text-[#041627]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
                       <button
                         type="button"
-                        onClick={() => removeItem(item.cartItemId)}
-                        aria-label={`Remove ${item.title}`}
-                        className="p-1 hover:opacity-60 transition-opacity shrink-0 cursor-pointer"
+                        onClick={() => removeFromCart(item.cartItemId || item.containerId)}
+                        className="inline-flex items-center gap-1.5 text-xs font-mono text-red-600 hover:text-red-800 cursor-pointer"
                       >
-                        <Trash2 aria-hidden="true" className="size-5 text-[#44474c]" />
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Remove
                       </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3 font-mono font-medium">
-                      <div>
-                        <div className="text-xs text-[#74777d] uppercase">SKU</div>
-                        <div className="text-sm text-[#44474c]">{item.sku}</div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-[#74777d] uppercase">Payload</div>
-                        <div className="text-sm text-[#44474c]">{item.payload}</div>
+
+                      <div className="flex items-center gap-4 ml-auto">
+                        <div className="text-right">
+                          <span className="block text-[10px] font-mono uppercase text-slate-400">
+                            Freight
+                          </span>
+                          <span className="text-xs font-bold font-mono text-[#041627]">
+                            ${item.freight.toLocaleString('en-US')}
+                          </span>
+                        </div>
+
+                        {activeUser ? (
+                          <button
+                            type="button"
+                            onClick={() => handleSingleDispatch(item)}
+                            className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-mono font-bold text-xs uppercase px-4 py-2 rounded transition cursor-pointer"
+                          >
+                            <ShieldCheck className="w-4 h-4" />
+                            Dispatch This Container ($
+                            {(item.unitCost + item.freight).toLocaleString('en-US')})
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => navigate('/dashboard/login')}
+                            className="inline-flex items-center gap-1.5 bg-[#041627] hover:bg-slate-800 text-white font-mono font-bold text-xs uppercase px-4 py-2 rounded transition cursor-pointer"
+                          >
+                            <Lock className="w-3.5 h-3.5" />
+                            Sign In to Dispatch
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
-
-                  {/* Route Selector: Origin & Destination */}
-                  <div className="bg-[#f1f4f6] border border-[#c4c6cd] rounded-[3px] p-3 flex flex-col gap-3">
-                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Route aria-hidden="true" className="size-4 shrink-0" />
-                        <span>
-                          Origin: <strong className="font-bold">{originObj.port} ({originObj.code})</strong>
-                        </span>
-                      </div>
-
-                      <div className="relative min-w-0 xl:w-64">
-                        <select
-                          value={originObj.code}
-                          onChange={(e) => setOrigin(item.cartItemId, e.target.value)}
-                          aria-label={`Origin for ${item.title}`}
-                          className="appearance-none w-full bg-white border border-[#c4c6cd] rounded-[3px] pl-3 pr-9 py-2 font-mono font-medium text-sm cursor-pointer focus:outline-none focus:border-[#041627]"
-                        >
-                          {originsList.map((o) => (
-                            <option key={o.code} value={o.code}>
-                              {o.port} ({o.code})
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-4 text-[#6b7280]" />
-                      </div>
-                    </div>
-
-                    <div className="border-t border-[#c4c6cd]/60 pt-3 flex flex-col xl:flex-row xl:items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 text-sm">
-                        <Route aria-hidden="true" className="size-4 shrink-0 text-amber-600" />
-                        <span>
-                          Destination: <strong className="font-bold">{destObj.port} ({destObj.code})</strong>
-                        </span>
-                      </div>
-
-                      <div className="relative min-w-0 xl:w-64">
-                        <select
-                          value={destObj.code}
-                          onChange={(e) => setDestination(item.cartItemId, e.target.value)}
-                          aria-label={`Destination for ${item.title}`}
-                          className="appearance-none w-full bg-white border border-[#c4c6cd] rounded-[3px] pl-3 pr-9 py-2 font-mono font-medium text-sm cursor-pointer focus:outline-none focus:border-[#041627]"
-                        >
-                          {destinationsList.map((d) => (
-                            <option key={d.code} value={d.code}>
-                              {d.port} ({d.code})
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-4 text-[#6b7280]" />
-                      </div>
-                    </div>
-
-                    {/* Fecha de embarque elegida en el filtro del Marketplace / Rates */}
-                    <div className="border-t border-[#c4c6cd]/60 pt-3 flex items-center gap-2 text-sm">
-                      <Calendar aria-hidden="true" className="size-4 shrink-0 text-amber-600" />
-                      <span>
-                        Ship Date: <strong className="font-bold">{formatShipDate(item.shipDate)}</strong>
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="pt-1 flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => handleSingleCheckout(item)}
-                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-mono font-bold text-xs uppercase px-4 py-2.5 rounded flex items-center gap-2 transition cursor-pointer"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      Dispatch This Container ({moneyShort(itemTotal)})
-                    </button>
-                  </div>
-                </div>
-
-                <div className="md:border-l border-[#c4c6cd] md:w-36 shrink-0 md:pl-5 flex md:flex-col justify-between items-end gap-4 text-right">
-                  <div>
-                    <div className="font-mono font-bold text-xs text-[#74777d] tracking-[0.05em]">UNIT COST</div>
-                    <div className="font-mono font-bold text-base">{moneyShort(item.unitCost)}</div>
-                  </div>
-                  <div>
-                    <div className="font-mono font-bold text-xs text-[#74777d] tracking-[0.05em]">FREIGHT</div>
-                    <div className="font-mono font-medium text-base">{moneyShort(originObj.freight)}</div>
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </section>
-
-        <aside className="w-full lg:w-[380px] shrink-0">
-          <div className="bg-[#041627] text-white rounded-[5px] p-6 flex flex-col gap-5">
-            <h2 className="text-xl font-semibold border-b border-[#38485a] pb-3">Order Summary</h2>
-
-            <div className="flex flex-col gap-3 pb-4 font-mono font-medium text-sm">
-              <div className="flex justify-between gap-4">
-                <span className="text-[#8192a7]">Total Merchandise</span>
-                <span>{money(merchandise)}</span>
-              </div>
-              <div className="flex justify-between gap-4">
-                <span className="text-[#8192a7]">Estimated Freight</span>
-                <span>{money(freight)}</span>
-              </div>
-              <div className="flex justify-between gap-4 text-[#a88c69]">
-                <span>Origin Optimization Savings</span>
-                <span>-{money(savings)}</span>
-              </div>
-              <div className="flex justify-between gap-4 border-t border-[#38485a] pt-4 font-bold text-lg">
-                <span>Total (USD)</span>
-                <span>{money(total)}</span>
-              </div>
-            </div>
-
-            <div className="bg-[#0b1d2d] rounded-[3px] p-3.5 flex gap-3 items-start text-[#b7c8de] text-xs leading-5">
-              <Info aria-hidden="true" className="size-4 mt-0.5 shrink-0 text-brand-orange" />
-              <p>
-                You can dispatch containers individually on each card or process the entire order below.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleCheckoutAll}
-              disabled={cart.length === 0}
-              className="bg-brand-orange hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed text-[#181c1e] font-mono font-bold text-sm tracking-[0.05em] py-3.5 rounded-[3px] transition cursor-pointer"
-            >
-              PROCEED TO CHECKOUT (ALL)
-            </button>
+                </article>
+              ))
+            )}
           </div>
-        </aside>
+
+          <aside className="bg-white border border-[#c4c6cd] rounded-lg p-6 shadow-sm flex flex-col gap-5">
+            <h2 className="text-xl font-bold text-[#041627] border-b border-slate-200 pb-3">
+              Order Summary
+            </h2>
+
+            <div className="bg-[#f7fafc] border border-slate-200 rounded-md p-3.5 text-xs">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="font-mono font-bold uppercase text-slate-600 flex items-center gap-1.5">
+                  <Receipt className="w-3.5 h-3.5 text-[#041627]" />
+                  Receipt Recipient
+                </span>
+                {activeUser && (
+                  <Link
+                    to="/profile"
+                    className="font-mono text-[11px] text-amber-700 underline hover:text-amber-900"
+                  >
+                    Edit Info
+                  </Link>
+                )}
+              </div>
+
+              {activeUser ? (
+                <div className="space-y-1 text-slate-700">
+                  <p>
+                    <strong>Name:</strong>{' '}
+                    {activeUser.fullName || activeUser.name || 'Registered User'}
+                  </p>
+                  <p>
+                    <strong>Email:</strong> {activeUser.email}
+                  </p>
+                  <p>
+                    <strong>Company:</strong> {activeUser.company || 'Not specified'}
+                  </p>
+                </div>
+              ) : (
+                <p className="text-red-700 font-medium">
+                  No account signed in. Please register or sign in to issue an invoice/receipt.
+                </p>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-2.5 text-sm font-mono">
+              <div className="flex justify-between text-slate-600">
+                <span>Total Merchandise</span>
+                <span className="font-bold text-[#041627]">
+                  ${totalMerchandise.toLocaleString('en-US')}.00
+                </span>
+              </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Estimated Freight</span>
+                <span className="font-bold text-[#041627]">
+                  ${totalFreight.toLocaleString('en-US')}.00
+                </span>
+              </div>
+              <div className="flex justify-between text-emerald-700">
+                <span>Origin Optimization Savings</span>
+                <span>-$0.00</span>
+              </div>
+            </div>
+
+            <div className="border-t border-slate-200 pt-4 flex items-baseline justify-between">
+              <span className="text-base font-bold text-[#041627]">Total (USD)</span>
+              <span className="text-2xl font-bold font-mono text-[#041627]">
+                ${grandTotal.toLocaleString('en-US')}.00
+              </span>
+            </div>
+
+            <div className="bg-slate-100 rounded p-3 text-xs text-slate-600 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+              <span>
+                You can dispatch containers individually on each card or process the entire order below.
+              </span>
+            </div>
+
+            {activeUser ? (
+              <button
+                type="button"
+                disabled={enrichedCart.length === 0}
+                onClick={handleCheckoutAll}
+                className="w-full bg-brand-orange hover:brightness-95 disabled:opacity-40 text-[#181c1e] font-mono font-bold text-xs uppercase py-3.5 px-4 rounded transition cursor-pointer flex items-center justify-center gap-2"
+              >
+                Proceed to Checkout (All)
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/login')}
+                className="w-full bg-[#041627] hover:bg-slate-800 text-white font-mono font-bold text-xs uppercase py-3.5 px-4 rounded transition cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Lock className="w-4 h-4" />
+                Register / Sign In to Checkout
+              </button>
+            )}
+          </aside>
+        </div>
       </main>
 
       <Footer />
