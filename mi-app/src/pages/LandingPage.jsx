@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Search, MapPin, Calendar, Filter, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
@@ -35,8 +35,12 @@ export default function LandingPage() {
     shipDate: searchParams.shipDate || new Date().toISOString().split('T')[0],
   });
 
-  // Sincroniza automáticamente si searchParams cambia desde otra página (Rates, Logistics, etc.)
-  useEffect(() => {
+  // Sincroniza si searchParams cambia desde otra página (Rates, Logistics, etc.).
+  // Se ajusta el estado durante el render (patrón recomendado por React) en lugar de un efecto.
+  const paramsKey = [searchParams.origin, searchParams.destination, searchParams.containerType, searchParams.shipDate].join('|');
+  const [prevParamsKey, setPrevParamsKey] = useState(paramsKey);
+  if (prevParamsKey !== paramsKey) {
+    setPrevParamsKey(paramsKey);
     setOriginInput(searchParams.origin || 'Shanghai (CNSHA)');
     setDestinationInput(searchParams.destination || 'Los Angeles (USLAX)');
     setTypeSelect(searchParams.containerType || 'all');
@@ -48,7 +52,7 @@ export default function LandingPage() {
       containerType: searchParams.containerType || 'all',
       shipDate: searchParams.shipDate || new Date().toISOString().split('T')[0],
     });
-  }, [searchParams.origin, searchParams.destination, searchParams.containerType, searchParams.shipDate]);
+  }
 
   const handleSearch = (e) => {
     if (e) e.preventDefault();

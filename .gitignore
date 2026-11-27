@@ -14,9 +14,8 @@ GEMINI.md
 opencode.json
 .opencode/
 .mcp.json
+
+# Variables de entorno (claves de Supabase)
 .env
-mi-app/.env
-.env
-mi-app/.env
-.env
-mi-app/.env
+.env.*
+!.env.example
