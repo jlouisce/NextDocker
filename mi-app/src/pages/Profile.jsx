@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { cartCatalog, containersData } from '../data/mockData';
+import { formatShipDate } from '../utils/formatDate';
 import {
   AUTH_CHANGE_EVENT,
   getCurrentUser,
@@ -194,6 +195,7 @@ export default function Profile() {
       price: item.unitCost || cat.unitCost || item.price || cat.price || 2100,
       origin: getOriginLabel(item),
       destination: getDestinationLabel(item),
+      shipDate: formatShipDate(item.shipDate),
     };
   };
 
@@ -508,6 +510,9 @@ export default function Profile() {
                         <p className="text-sm text-slate-600">
                           Destination: <strong className="font-semibold">{details.destination}</strong>
                         </p>
+                        <p className="text-sm text-slate-600">
+                          Ship Date: <strong className="font-semibold">{details.shipDate}</strong>
+                        </p>
                         <p className="text-amber-600 font-bold font-mono text-base mt-1">{money(details.price)}</p>
                       </div>
 
@@ -563,6 +568,9 @@ export default function Profile() {
                       </p>
                       <p className="text-sm text-[#15803d]">
                         Destination: <strong className="font-semibold">{details.destination}</strong>
+                      </p>
+                      <p className="text-sm text-[#15803d]">
+                        Ship Date: <strong className="font-semibold">{details.shipDate}</strong>
                       </p>
                       <p className="text-[#166534] font-bold font-mono text-base mt-0.5">{money(details.price)}</p>
                       <div className="mt-1">

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { containersData } from '../data/mockData';
 import { supabase } from '../utils/supabaseClient';
 import { getSession, syncSupabaseSession } from '../utils/auth';
+import { formatShipDate } from '../utils/formatDate';
 
 const AppContext = createContext();
 
@@ -77,7 +78,7 @@ export function AppProvider({ children }) {
 
     const route =
       order.origin && order.destination
-        ? `${order.origin} → ${order.destination}`
+        ? `${order.origin} → ${order.destination}${order.shipDate ? `, ship date ${formatShipDate(order.shipDate)}` : ''}`
         : 'Global Freight Corridor';
 
     setNotifications((prev) => {

@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ChevronDown, Info, Route, Trash2, CheckCircle } from 'lucide-react';
+import { Calendar, ChevronDown, Info, Route, Trash2, CheckCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Footer from '../components/Footer';
 import { useApp } from '../context/AppContext';
 import { cartCatalog } from '../data/mockData';
+import { formatShipDate } from '../utils/formatDate';
 
 const money = (value) => `$${(value || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const moneyShort = (value) => `$${(value || 0).toLocaleString('en-US')}`;
@@ -306,6 +307,14 @@ export default function Logistics() {
                         </select>
                         <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 size-4 text-[#6b7280]" />
                       </div>
+                    </div>
+
+                    {/* Fecha de embarque elegida en el filtro del Marketplace / Rates */}
+                    <div className="border-t border-[#c4c6cd]/60 pt-3 flex items-center gap-2 text-sm">
+                      <Calendar aria-hidden="true" className="size-4 shrink-0 text-amber-600" />
+                      <span>
+                        Ship Date: <strong className="font-bold">{formatShipDate(item.shipDate)}</strong>
+                      </span>
                     </div>
                   </div>
 
